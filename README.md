@@ -31,5 +31,10 @@ matter.
 * Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
 * Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
+## Building
+
+    $ npm install
+    $ browserify -p esmify src/index.js -o bundle.js
+
 x
 
