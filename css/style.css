@@ -1,0 +1,28 @@
+body {
+	background: #eee;
+}
+
+.long_name {
+	font-family: monospace, monospace;
+	font-size: 50%;
+}
+
+.short_name {
+	font-size: 150%;
+}
+
+.nomination_percent {
+	font-size: 200%;
+}
+
+.total {
+	font-size: 150%;
+}
+
+.nomination_count {
+}
+
+.nom {
+	border: 1px solid #eee;
+	background: #fff;
+}
