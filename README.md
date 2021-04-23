@@ -25,16 +25,16 @@ that era. In this case we divide the payout equally and lower a
 nominations that are not activated much, so perhaps this doesn't
 matter.
 
-[Try it here](https://playing-with-dust.github.io/nominumbers/)
+## [Try it here](https://playing-with-dust.github.io/nominumbers/)
  
-* Complaints -> hegimonic_philosophy@protonmail.com
-* Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
-* Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
-
 ## Building
 
     $ npm install
     $ browserify -p esmify src/index.js -o bundle.js
+
+* Complaints -> hegimonic_philosophy@protonmail.com
+* Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
+* Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
 x
 
