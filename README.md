@@ -1,7 +1,7 @@
 # nominumbers
 
-Kusama is a non-extinction causing cryptocurrency, part of the
-Polkadot network. Instead of 'miners' using energy to validate
+[Kusama](https://kusama.network) is a non-extinction causing cryptocurrency, part of the
+[Polkadot network](https://polkadot.network/). Instead of 'miners' using energy to validate
 transactions as in Bitcoin, the community 'nominates' trustworthy
 'validators' (that work efficiently using ordinary servers) and
 who redistribute a small share of their awards to their nominators in
