@@ -31,11 +31,12 @@ const findValidatorInParams = (params) => {
     return null;
 }
 
-const findNominations = async (div,address) => {
+const findNominations = async (div,address,showAccountName) => {
     console.log(["nomination search for controller: ",address])
     let targets = await api.getNomination(address)
     if (!targets) {
 	console.log("searching in batch for nominations")
+	await sleep(1000); 
 	targets = await api.getNominationFromBatch(address)
 	if (!targets) {	
 	    jQuery("#status").html("status: problem loading nominations")
@@ -43,7 +44,7 @@ const findNominations = async (div,address) => {
 	}
     }
     
-    let nominations = []
+    let nominations = {}
     console.log(targets)
     for (let t of targets) {
 	console.log(t)
@@ -62,8 +63,10 @@ const findNominations = async (div,address) => {
 	let name_div = document.createElement('div');
 	nomination_div.appendChild(name_div);
 	name_div.className = "long_name"
-	await displayAccount(name_div,fromHexString(t))
-	await sleep(1000);
+	if (showAccountName) {
+	    await displayAccount(name_div,fromHexString(t))
+	    await sleep(1000);
+	}
 
 	let total_div = document.createElement('div');
 	nomination_div.appendChild(total_div);
@@ -117,70 +120,76 @@ const updateNominations = (stats,nominations) => {
 }
 
 const displayStaking = async (div,stash_address,nominations) => {
+    await sleep(1000);
     var x = await api.getStaking(stash_address);
+    await sleep(1000);
     const stats = { weekly_total: 0 };
     for (const r of x) {
-	//console.log(r.extrinsic_hash)
+	console.log(r.extrinsic_hash)
 	//let y = await api.getSearch(r.extrinsic_hash);
+	// get the transaction detail of this reward
 	let y = await api.getExtrinsic(r.extrinsic_hash);
 	await sleep(1000);
+
 	stats.weekly_total += parseInt(r.amount)
+	console.log(y);
+	
+	// events contain nominator addresses
+	// params contain validator_stash addresses, but sometimes these are batched
+	// - so we need to filter them to find the ones we have actually nominated
+	
+	// two different forms are possible
+	if (y.data.call_module_function=="batch") {
+	    // a list of mutltiple calls
+	    let calls = y.data.params[0].value;
+	    let unique = []
+	    for (let call of calls) {
+		let validator=findValidatorInParams(call.params)
+		// validators can appear more than once
+		if (!unique.includes(validator)) {
+		    unique.push(validator)
+		}		
+	    }
 
-	if (y.message=="Record Not Found") {
-	    console.log(y);
-	} else  {
-	    // events contain nominator addresses
-	    // params seem to contain validator_stash addresses, but sometimes these are batched
-	    // - so we need to filter them to find the ones we have actually nominated
 	    
-	    // two different forms are possible
-	    if (y.data.params.length==1) {
-		// a list of mutltiple calls
-		let calls = y.data.params[0].value;
-		let unique = []
-		for (let call of calls) {
-		    let validator=findValidatorInParams(call.params)
-		    // validators can appear more than once
-		    if (!unique.includes(validator)) {
-			unique.push(validator)
-		    }
-		    
-		}
-
-		// count number of nominations we have
-		let count=0
-		for (let validator of unique) {
-		    if (nominations[validator]) {
-			count+=1;
-		    }
-		}
-		
-		for (let validator of unique) {
-		    if (nominations[validator]) {
-			let n = nominations[validator]
-			// biggest mystery is whether we can get which validator is our one
-			// if we have nomiated multiple in this set, then split the amount
-			// between them for the moment
-			n.total+=parseInt(r.amount)/unique.length
-			if (count>1) {
-			    n.splits+=1
-			}
-			n.count+=1
-			updateNominations(stats,nominations)							
-		    }
-		}
-	    } else {
-		// or a single validator stash
-		let validator=findValidatorInParams(y.data.params)
-
-		if (nominations.includes(validator)) {
-		    let n = nominations[validator]
-		    n.total+=parseInt(r.amount)					
-		    n.count+=1
-		    updateNominations(stats,nominations)
+	    // count number of nominations we have
+	    let count=0
+	    for (let validator of unique) {
+		if (nominations[validator]) {
+		    count+=1;
 		}
 	    }
 
+	    if (count==0) {
+		console.log("could not find nominated validator in batched payout?");
+		console.log(unique)
+		console.log(nominations)
+	    }
+	    
+	    for (let validator of unique) {
+		if (nominations[validator]) {
+		    let n = nominations[validator]
+		    // biggest mystery is whether we can get which validator is our one
+		    // if we have nomiated multiple in this set, then split the amount
+		    // between them for the moment
+		    n.total+=parseInt(r.amount)/unique.length
+		    if (count>1) {
+			n.splits+=1
+		    }
+		    n.count+=1
+		    updateNominations(stats,nominations)							
+		}
+	    }
+	} else {
+	    // or a single validator stash
+	    let validator=findValidatorInParams(y.data.params)
+
+	    let n = nominations[validator]
+	    if (n) {
+		n.total+=parseInt(r.amount)					
+		n.count+=1
+		updateNominations(stats,nominations)
+	    }
 	}
     }
 }

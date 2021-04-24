@@ -41,7 +41,7 @@ const getStaking = async (address) => {
 	    console.log(data);
 
 	    for(var i=0; i<data.data.list.length; i++) {
-		let params = JSON.parse(data.data.list[i].params);
+		//let params = JSON.parse(data.data.list[i].params);
 		rewards.push({
 		    "event_index": data.data.list[i].event_index,
 		    "event_idx": data.data.list[i].event_idx,
@@ -109,10 +109,13 @@ const getNomination = async (address) => {
 	    if (data.data.count<=0) { return null }
 	    for (const x of data.data.extrinsics) {
 		if (x.call_module_function=="nominate") {
-		    let targets = JSON.parse(x.params)[0].value
-		    console.log(targets)
+		    let targets = JSON.parse(x.params)[0].value		    
 		    for (let t of targets) {
-			ret.push(t.Id)
+			if (t.Id) {
+			    ret.push(t.Id)
+			} else {
+			    ret.push(t)
+			}
 		    }
 		    return ret
 		}
@@ -126,33 +129,44 @@ const getNominationFromBatch = async (address) => {
     // todo: handle this (search batched)
     return callApi(
 	"scan/extrinsics", {
-	    "row": 20,
+	    "row": 100,
 	    "page": 0,
 	    "address": address,
-	    "call": "batch_all"
 	},
 	(data) => {
-	    console.log(data);
 	    if (data.data.count<1) {
 		return null
 	    }
+	    let ret=[]
 	    for (let x of data.data.extrinsics) {
-		let params = JSON.parse(x.params);
-		console.log(params)
-		let calls = params[0].value;
-		if (calls) {
+		if (x.call_module_function=="batch" ||
+		    x.call_module_function=="batch_all") {
+		    let params = JSON.parse(x.params);
+		    console.log(params)
+		    let calls = params[0].value;
+		    if (!calls) {
+			console.log("no calls found in params")
+			return null;
+		    }
 		    for (let call of calls) {
+			console.log(call)
 			if (call.call_function=="nominate") {
 			    for (let arg of call.call_args) {
 				if (arg.name=="targets") {
-				    return null
+				    for (let t of arg.value) {
+					if (t.Id) {
+					    ret.push(t.Id)
+					} else {
+					    ret.push(t)
+					}
+				    }
+				    return ret
 				}
 			    }
 			}
 		    }
 		}
-	    }
-	    
+	    }	    
 	    return null;
 	});
 }
@@ -192,18 +206,21 @@ const controllerFromBatchData = (data) => {
 	return null
     }
     for (let x of data.data.extrinsics) {
-	let params = JSON.parse(x.params);
-	let calls = params[0].value;
-	if (calls) {
-	    for (let call of calls) {
-		if (call.call_function=="set_controller" ||
-		    call.call_function=="bond") {
-		    for (let arg of call.call_args) {
-			if (arg.name=="controller") {
-			    if (arg.value.Id) {
-				return ss58Encode(fromHexString(arg.value.Id))
-			    } else {
-				return ss58Encode(fromHexString(arg.value))
+	if (x.call_module_function=="batch" ||
+	    x.call_module_function=="batch_all") {
+	    let params = JSON.parse(x.params);
+	    let calls = params[0].value;
+	    if (calls) {
+		for (let call of calls) {
+		    if (call.call_function=="set_controller" ||
+			call.call_function=="bond") {
+			for (let arg of call.call_args) {
+			    if (arg.name=="controller") {
+				if (arg.value.Id) {
+				    return ss58Encode(fromHexString(arg.value.Id))
+				} else {
+				    return ss58Encode(fromHexString(arg.value))
+				}
 			    }
 			}
 		    }
@@ -214,26 +231,12 @@ const controllerFromBatchData = (data) => {
     return null;
 }
 
-const getControllerFromBatchAll = async (address) => {
-    return callApi(
-	"scan/extrinsics", {
-	    "row": 20,
-	    "page": 0,
-	    "address": address,
-	    "call": "batch_all"
-	}, 
-	(data) => {
-	    return controllerFromBatchData(data);
-	});
-}
-
 const getControllerFromBatch = async (address) => {
     return callApi(
 	"scan/extrinsics", {
-	    "row": 20,
+	    "row": 100,
 	    "page": 0,
 	    "address": address,
-	    "call": "batch"
 	},
 	(data) => {
 	    return controllerFromBatchData(data);
@@ -260,6 +263,5 @@ export {
     getNominationFromBatch,
     getController,
     getControllerFromBatch,
-    getControllerFromBatchAll,
     getExtrinsics
 }

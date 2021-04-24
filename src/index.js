@@ -23,15 +23,11 @@ const stashAddr = async () => {
 	if (!controller_address) {
 	    console.log("searching in batch for controller")
 	    // try another approach
+	    await utils.sleep(1000); 
 	    controller_address = await api.getControllerFromBatch(stash_address)
 	    if (!controller_address) {
-		// try another approach
-		console.log("searching in batch_all for controller")
-		controller_address = await api.getControllerFromBatchAll(stash_address)
-		if (!controller_address) {
-		    jQuery("#status").html("status: couldn't find controller")
-		    return
-		}
+		jQuery("#status").html("status: couldn't find controller")
+		return
 	    }
 	}
 	jQuery("#status").html("status: ready")
@@ -41,11 +37,12 @@ const stashAddr = async () => {
 }
 
 const run = async () => {
+    jQuery("#nominations").empty();
     jQuery("#status").html("status: loading nominations")
     var el = document.getElementById('nominations');
-    nominations = await nn.findNominations(el,controller_address)
-
-    if (nominations && nominations.length>0) {
+    nominations = await nn.findNominations(el,controller_address,false)
+    console.log(nominations);
+    if (nominations) {
 	jQuery("#status").html("status: loading rewards")
 	var el = document.getElementById('reward-slash');
 	await nn.displayStaking(el,stash_address,nominations)
