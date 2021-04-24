@@ -107,6 +107,8 @@ const getNomination = async (address) => {
 	(data) => {
 	    let ret=[]
 	    if (data.data.count<=0) { return null }
+	    // collect all nominators in all calls, just in case
+	    // this has been done multiple times
 	    for (const x of data.data.extrinsics) {
 		if (x.call_module_function=="nominate") {
 		    let targets = JSON.parse(x.params)[0].value		    
@@ -117,16 +119,13 @@ const getNomination = async (address) => {
 			    ret.push(t)
 			}
 		    }
-		    return ret
 		}
 	    }
-	    return null;
+	    return ret
 	});
 }
 
 const getNominationFromBatch = async (address) => {
-    console.log(["nomi batch",address]);
-    // todo: handle this (search batched)
     return callApi(
 	"scan/extrinsics", {
 	    "row": 100,
@@ -142,32 +141,29 @@ const getNominationFromBatch = async (address) => {
 		if (x.call_module_function=="batch" ||
 		    x.call_module_function=="batch_all") {
 		    let params = JSON.parse(x.params);
+		    console.log("-----------------")
 		    console.log(params)
-		    let calls = params[0].value;
-		    if (!calls) {
-			console.log("no calls found in params")
-			return null;
-		    }
-		    for (let call of calls) {
-			console.log(call)
-			if (call.call_function=="nominate") {
-			    for (let arg of call.call_args) {
-				if (arg.name=="targets") {
-				    for (let t of arg.value) {
-					if (t.Id) {
-					    ret.push(t.Id)
-					} else {
-					    ret.push(t)
+		    for (let param of params) {
+			for (let call of param.value) {
+			    console.log(call)
+			    if (call.call_function=="nominate") {
+				for (let arg of call.call_args) {
+				    if (arg.name=="targets") {
+					for (let t of arg.value) {
+					    if (t.Id) {
+						ret.push(t.Id)
+					    } else {
+						ret.push(t)
+					    }
 					}
 				    }
-				    return ret
 				}
 			    }
 			}
 		    }
 		}
 	    }	    
-	    return null;
+	    return ret;
 	});
 }
 

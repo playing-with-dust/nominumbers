@@ -11861,30 +11861,31 @@ const getNomination = async address => {
 
     if (data.data.count <= 0) {
       return null;
-    }
+    } // collect all nominators in all calls, just in case
+    // this has been done multiple times
+
 
     for (const x of data.data.extrinsics) {
       if (x.call_module_function == "nominate") {
         let targets = JSON.parse(x.params)[0].value;
-        console.log(targets);
 
         for (let t of targets) {
-          ret.push(t.Id);
+          if (t.Id) {
+            ret.push(t.Id);
+          } else {
+            ret.push(t);
+          }
         }
-
-        return ret;
       }
     }
 
-    return null;
+    return ret;
   });
 };
 
 exports.getNomination = getNomination;
 
 const getNominationFromBatch = async address => {
-  console.log(["nomi batch", address]); // todo: handle this (search batched)
-
   return callApi("scan/extrinsics", {
     "row": 100,
     "page": 0,
@@ -11899,29 +11900,24 @@ const getNominationFromBatch = async address => {
     for (let x of data.data.extrinsics) {
       if (x.call_module_function == "batch" || x.call_module_function == "batch_all") {
         let params = JSON.parse(x.params);
+        console.log("-----------------");
         console.log(params);
-        let calls = params[0].value;
 
-        if (!calls) {
-          console.log("no calls found in params");
-          return null;
-        }
+        for (let param of params) {
+          for (let call of param.value) {
+            console.log(call);
 
-        for (let call of calls) {
-          console.log(call);
-
-          if (call.call_function == "nominate") {
-            for (let arg of call.call_args) {
-              if (arg.name == "targets") {
-                for (let t of arg.value) {
-                  if (t.Id) {
-                    ret.push(t.Id);
-                  } else {
-                    ret.push(t);
+            if (call.call_function == "nominate") {
+              for (let arg of call.call_args) {
+                if (arg.name == "targets") {
+                  for (let t of arg.value) {
+                    if (t.Id) {
+                      ret.push(t.Id);
+                    } else {
+                      ret.push(t);
+                    }
                   }
                 }
-
-                return ret;
               }
             }
           }
@@ -11929,7 +11925,7 @@ const getNominationFromBatch = async address => {
       }
     }
 
-    return null;
+    return ret;
   });
 };
 
@@ -12052,10 +12048,15 @@ const {
 
 const jQuery = require("jquery");
 
-const displayAccount = async (div, raw_address) => {
+const displayAccount = async (div, raw_address, showName) => {
   div.appendChild(identicon(raw_address, false, 30));
-  let account = await api.getSearch(ss58Encode(raw_address));
-  let name = account.data.account.account_display.display;
+  let account;
+  let name;
+
+  if (showName) {
+    account = await api.getSearch(ss58Encode(raw_address));
+    name = account.data.account.account_display.display;
+  }
 
   if (!name || name == "") {
     div.innerHTML += ss58Encode(raw_address) + "<br>";
@@ -12118,9 +12119,9 @@ const findNominations = async (div, address, showAccountName) => {
     let name_div = document.createElement('div');
     nomination_div.appendChild(name_div);
     name_div.className = "long_name";
+    await displayAccount(name_div, fromHexString(t), showAccountName);
 
     if (showAccountName) {
-      await displayAccount(name_div, fromHexString(t));
       await sleep(1000);
     }
 
@@ -12198,18 +12199,19 @@ const displayStaking = async (div, stash_address, nominations) => {
     // two different forms are possible
 
     if (y.data.call_module_function == "batch") {
-      // a list of mutltiple calls
-      let calls = y.data.params[0].value;
-      let unique = [];
+      let unique = []; // a list of mutltiple calls
 
-      for (let call of calls) {
-        let validator = findValidatorInParams(call.params); // validators can appear more than once
+      for (let calls of y.data.params) {
+        for (let call of calls.value) {
+          let validator = findValidatorInParams(call.params); // validators can appear more than once
 
-        if (!unique.includes(validator)) {
-          unique.push(validator);
+          if (!unique.includes(validator)) {
+            unique.push(validator);
+          }
         }
-      } // count number of nominations we have
+      }
 
+      console.log("found: " + unique.length + " validators"); // count number of nominations we have
 
       let count = 0;
 
@@ -12219,10 +12221,9 @@ const displayStaking = async (div, stash_address, nominations) => {
         }
       }
 
-      if (count == 0) {
-        console.log("could not find nominated validator in batched payout?");
-        console.log(unique);
-        console.log(nominations);
+      if (count > 0) {
+        console.log("found nominated validator in batched payout?"); //console.log(unique)
+        //console.log(nominations)
       }
 
       for (let validator of unique) {

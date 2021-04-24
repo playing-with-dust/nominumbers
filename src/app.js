@@ -6,10 +6,14 @@ const api = require('./api.js')
 const {fromHexString, toHexString, sleep} = require('./utils.js')
 const jQuery = require("jquery")
 
-const displayAccount = async (div,raw_address) => {
+const displayAccount = async (div,raw_address,showName) => {
     div.appendChild(identicon(raw_address, false, 30));		
-    let account = await api.getSearch(ss58Encode(raw_address))
-    let name = account.data.account.account_display.display
+    let account
+    let name
+    if (showName) {
+	account = await api.getSearch(ss58Encode(raw_address))
+	name = account.data.account.account_display.display
+    }
     if (!name || name=="") {
 	div.innerHTML+=ss58Encode(raw_address)+"<br>";
     } else {
@@ -62,9 +66,9 @@ const findNominations = async (div,address,showAccountName) => {
 
 	let name_div = document.createElement('div');
 	nomination_div.appendChild(name_div);
-	name_div.className = "long_name"
+	name_div.className = "long_name"	
+	await displayAccount(name_div,fromHexString(t),showAccountName)
 	if (showAccountName) {
-	    await displayAccount(name_div,fromHexString(t))
 	    await sleep(1000);
 	}
 
@@ -140,17 +144,19 @@ const displayStaking = async (div,stash_address,nominations) => {
 	
 	// two different forms are possible
 	if (y.data.call_module_function=="batch") {
-	    // a list of mutltiple calls
-	    let calls = y.data.params[0].value;
 	    let unique = []
-	    for (let call of calls) {
-		let validator=findValidatorInParams(call.params)
-		// validators can appear more than once
-		if (!unique.includes(validator)) {
-		    unique.push(validator)
-		}		
+	    // a list of mutltiple calls
+	    for (let calls of y.data.params) {
+		for (let call of calls.value) {
+		    let validator=findValidatorInParams(call.params)
+		    // validators can appear more than once
+		    if (!unique.includes(validator)) {
+			unique.push(validator)
+		    }
+		}
 	    }
 
+	    console.log("found: "+unique.length+" validators")
 	    
 	    // count number of nominations we have
 	    let count=0
@@ -160,10 +166,10 @@ const displayStaking = async (div,stash_address,nominations) => {
 		}
 	    }
 
-	    if (count==0) {
-		console.log("could not find nominated validator in batched payout?");
-		console.log(unique)
-		console.log(nominations)
+	    if (count>0) {
+		console.log("found nominated validator in batched payout?");
+		//console.log(unique)
+		//console.log(nominations)
 	    }
 	    
 	    for (let validator of unique) {
