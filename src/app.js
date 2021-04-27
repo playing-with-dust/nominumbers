@@ -22,6 +22,22 @@ const displayAccount = async (div,raw_address,showName) => {
     }	
 }
 
+
+const getController = async (stash_address) => {
+    let results = search.searchAddress(
+	0,stash_address,
+	{
+	    call_function: ["bond"],
+	    param: ["controller"]
+	});
+    console.log(results)
+    if (results.length>0) {
+	return 
+	
+    }
+    return null
+}
+    
 const findValidatorInParams = (params) => {
     let validator_stash
     for (const p of params) {		
@@ -40,7 +56,6 @@ const findNominations = async (div,address,showAccountName) => {
     let targets = await api.getNomination(address)
     if (!targets) {
 	console.log("searching in batch for nominations")
-	await sleep(1000); 
 	targets = await api.getNominationFromBatch(address)
 	if (!targets) {	
 	    jQuery("#status").html("status: problem loading nominations")

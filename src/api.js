@@ -7,6 +7,10 @@ const jQuery = require("jquery")
 
 
 const callApi = async (url,body,fn) => {
+    console.log("calling: "+url)
+    // we have to throttle the bandwidth
+    await sleep(400);
+
     const location = window.location.hostname;
     const settings = {
         method: 'POST',
@@ -20,7 +24,6 @@ const callApi = async (url,body,fn) => {
     try {
         const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/`+url, settings);
         const data = await fetchResponse.json();
-	// we have to throttle the bandwidth
 	return fn(data);
     } catch (e) {
         return e;
@@ -89,154 +92,11 @@ const getSearch = async (key) => {
 const getExtrinsics = async (address) => {
     return callApi(
 	"scan/extrinsics", {
-	    "row": 20,
+	    "row": 100,
 	    "page": 0,
 	    "address": address
 	},
 	(data) => { return data; });
-}
-
-const getNomination = async (address) => {
-    return callApi(
-	"scan/extrinsics", {
-	    "row": 1,
-	    "page": 0,
-	    "address": address,
-	    "call": "nominate"
-	},
-	(data) => {
-	    let ret=[]
-	    if (data.data.count<=0) { return null }
-	    // collect all nominators in all calls, just in case
-	    // this has been done multiple times
-	    for (const x of data.data.extrinsics) {
-		if (x.call_module_function=="nominate") {
-		    let targets = JSON.parse(x.params)[0].value		    
-		    for (let t of targets) {
-			if (t.Id) {
-			    ret.push(t.Id)
-			} else {
-			    ret.push(t)
-			}
-		    }
-		}
-	    }
-	    return ret
-	});
-}
-
-const getNominationFromBatch = async (address) => {
-    return callApi(
-	"scan/extrinsics", {
-	    "row": 100,
-	    "page": 0,
-	    "address": address,
-	},
-	(data) => {
-	    if (data.data.count<1) {
-		return null
-	    }
-	    let ret=[]
-	    for (let x of data.data.extrinsics) {
-		if (x.call_module_function=="batch" ||
-		    x.call_module_function=="batch_all") {
-		    let params = JSON.parse(x.params);
-		    console.log("-----------------")
-		    console.log(params)
-		    for (let param of params) {
-			for (let call of param.value) {
-			    console.log(call)
-			    if (call.call_function=="nominate") {
-				for (let arg of call.call_args) {
-				    if (arg.name=="targets") {
-					for (let t of arg.value) {
-					    if (t.Id) {
-						ret.push(t.Id)
-					    } else {
-						ret.push(t)
-					    }
-					}
-				    }
-				}
-			    }
-			}
-		    }
-		}
-	    }	    
-	    return ret;
-	});
-}
-
-
-const getController = async (address) => {
-    return callApi(
-	"scan/extrinsics", {
-	    "row": 1,
-	    "page": 0,
-	    "address": address,
-	    "call": "bond"
-	},
-	(data) => {
-	    //console.log("looking for controller:");
-	    //console.log(data);
-	    if (data.data.count>0) {
-		let params = JSON.parse(data.data.extrinsics[0].params);
-		for (const p of params) {		
-		    if (p.name=="controller") {
-			if (p.value.Id) {
-			    return ss58Encode(fromHexString(p.value.Id))
-			} else {
-			    return ss58Encode(fromHexString(p.value))
-			}
-		    }
-		}
-		return null;
-	    } else {
-		return null;
-	    }});
-}
-
-
-const controllerFromBatchData = (data) => {
-    if (data.data.count<1) {
-	return null
-    }
-    for (let x of data.data.extrinsics) {
-	if (x.call_module_function=="batch" ||
-	    x.call_module_function=="batch_all") {
-	    let params = JSON.parse(x.params);
-	    let calls = params[0].value;
-	    if (calls) {
-		for (let call of calls) {
-		    if (call.call_function=="set_controller" ||
-			call.call_function=="bond") {
-			for (let arg of call.call_args) {
-			    if (arg.name=="controller") {
-				if (arg.value.Id) {
-				    return ss58Encode(fromHexString(arg.value.Id))
-				} else {
-				    return ss58Encode(fromHexString(arg.value))
-				}
-			    }
-			}
-		    }
-		}
-	    }
-	}
-    }	    
-    return null;
-}
-
-const getControllerFromBatch = async (address) => {
-    return callApi(
-	"scan/extrinsics", {
-	    "row": 100,
-	    "page": 0,
-	    "address": address,
-	},
-	(data) => {
-	    return controllerFromBatchData(data);
-	});
 }
 
 
@@ -255,9 +115,5 @@ export {
     getEvent, 
     getSearch, 
     getExtrinsic,
-    getNomination,
-    getNominationFromBatch,
-    getController,
-    getControllerFromBatch,
     getExtrinsics
 }

@@ -11721,7 +11721,7 @@ exports.ss58Decode = ss58Decode;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getExtrinsics = exports.getControllerFromBatch = exports.getController = exports.getNominationFromBatch = exports.getNomination = exports.getExtrinsic = exports.getSearch = exports.getEvent = exports.getBonded = exports.getTransfers = exports.getStaking = void 0;
+exports.getExtrinsics = exports.getExtrinsic = exports.getSearch = exports.getEvent = exports.getBonded = exports.getTransfers = exports.getStaking = void 0;
 
 const bs58 = require('bs58');
 
@@ -11746,6 +11746,9 @@ const {
 const jQuery = require("jquery");
 
 const callApi = async (url, body, fn) => {
+  console.log("calling: " + url); // we have to throttle the bandwidth
+
+  await sleep(400);
   const location = window.location.hostname;
   const settings = {
     method: 'POST',
@@ -11759,8 +11762,7 @@ const callApi = async (url, body, fn) => {
 
   try {
     const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/` + url, settings);
-    const data = await fetchResponse.json(); // we have to throttle the bandwidth
-
+    const data = await fetchResponse.json();
     return fn(data);
   } catch (e) {
     return e;
@@ -11840,7 +11842,7 @@ exports.getSearch = getSearch;
 
 const getExtrinsics = async address => {
   return callApi("scan/extrinsics", {
-    "row": 20,
+    "row": 100,
     "page": 0,
     "address": address
   }, data => {
@@ -11849,161 +11851,6 @@ const getExtrinsics = async address => {
 };
 
 exports.getExtrinsics = getExtrinsics;
-
-const getNomination = async address => {
-  return callApi("scan/extrinsics", {
-    "row": 1,
-    "page": 0,
-    "address": address,
-    "call": "nominate"
-  }, data => {
-    let ret = [];
-
-    if (data.data.count <= 0) {
-      return null;
-    } // collect all nominators in all calls, just in case
-    // this has been done multiple times
-
-
-    for (const x of data.data.extrinsics) {
-      if (x.call_module_function == "nominate") {
-        let targets = JSON.parse(x.params)[0].value;
-
-        for (let t of targets) {
-          if (t.Id) {
-            ret.push(t.Id);
-          } else {
-            ret.push(t);
-          }
-        }
-      }
-    }
-
-    return ret;
-  });
-};
-
-exports.getNomination = getNomination;
-
-const getNominationFromBatch = async address => {
-  return callApi("scan/extrinsics", {
-    "row": 100,
-    "page": 0,
-    "address": address
-  }, data => {
-    if (data.data.count < 1) {
-      return null;
-    }
-
-    let ret = [];
-
-    for (let x of data.data.extrinsics) {
-      if (x.call_module_function == "batch" || x.call_module_function == "batch_all") {
-        let params = JSON.parse(x.params);
-        console.log("-----------------");
-        console.log(params);
-
-        for (let param of params) {
-          for (let call of param.value) {
-            console.log(call);
-
-            if (call.call_function == "nominate") {
-              for (let arg of call.call_args) {
-                if (arg.name == "targets") {
-                  for (let t of arg.value) {
-                    if (t.Id) {
-                      ret.push(t.Id);
-                    } else {
-                      ret.push(t);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return ret;
-  });
-};
-
-exports.getNominationFromBatch = getNominationFromBatch;
-
-const getController = async address => {
-  return callApi("scan/extrinsics", {
-    "row": 1,
-    "page": 0,
-    "address": address,
-    "call": "bond"
-  }, data => {
-    //console.log("looking for controller:");
-    //console.log(data);
-    if (data.data.count > 0) {
-      let params = JSON.parse(data.data.extrinsics[0].params);
-
-      for (const p of params) {
-        if (p.name == "controller") {
-          if (p.value.Id) {
-            return ss58Encode(fromHexString(p.value.Id));
-          } else {
-            return ss58Encode(fromHexString(p.value));
-          }
-        }
-      }
-
-      return null;
-    } else {
-      return null;
-    }
-  });
-};
-
-exports.getController = getController;
-
-const controllerFromBatchData = data => {
-  if (data.data.count < 1) {
-    return null;
-  }
-
-  for (let x of data.data.extrinsics) {
-    if (x.call_module_function == "batch" || x.call_module_function == "batch_all") {
-      let params = JSON.parse(x.params);
-      let calls = params[0].value;
-
-      if (calls) {
-        for (let call of calls) {
-          if (call.call_function == "set_controller" || call.call_function == "bond") {
-            for (let arg of call.call_args) {
-              if (arg.name == "controller") {
-                if (arg.value.Id) {
-                  return ss58Encode(fromHexString(arg.value.Id));
-                } else {
-                  return ss58Encode(fromHexString(arg.value));
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return null;
-};
-
-const getControllerFromBatch = async address => {
-  return callApi("scan/extrinsics", {
-    "row": 100,
-    "page": 0,
-    "address": address
-  }, data => {
-    return controllerFromBatchData(data);
-  });
-};
-
-exports.getControllerFromBatch = getControllerFromBatch;
 
 const getExtrinsic = async hash => {
   return callApi("scan/extrinsic", {
@@ -12015,250 +11862,7 @@ const getExtrinsic = async hash => {
 
 exports.getExtrinsic = getExtrinsic;
 
-},{"./address.js":9,"./identicon.js":12,"./utils.js":14,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.displayStaking = exports.findNominations = exports.findValidatorInParams = exports.displayAccount = void 0;
-
-const bs58 = require('bs58');
-
-const {
-  blake2b
-} = require('blakejs');
-
-const {
-  ss58Encode,
-  ss58Decode
-} = require('./address.js');
-
-const {
-  identicon
-} = require('./identicon.js');
-
-const api = require('./api.js');
-
-const {
-  fromHexString,
-  toHexString,
-  sleep
-} = require('./utils.js');
-
-const jQuery = require("jquery");
-
-const displayAccount = async (div, raw_address, showName) => {
-  div.appendChild(identicon(raw_address, false, 30));
-  let account;
-  let name;
-
-  if (showName) {
-    account = await api.getSearch(ss58Encode(raw_address));
-    name = account.data.account.account_display.display;
-  }
-
-  if (!name || name == "") {
-    div.innerHTML += ss58Encode(raw_address) + "<br>";
-  } else {
-    div.className = "short_name";
-    div.innerHTML += name + "<br>";
-  }
-};
-
-exports.displayAccount = displayAccount;
-
-const findValidatorInParams = params => {
-  let validator_stash;
-
-  for (const p of params) {
-    if (p.name == "validator_stash") {
-      validator_stash = fromHexString(p.value);
-    }
-  }
-
-  if (validator_stash) {
-    return ss58Encode(validator_stash);
-  }
-
-  return null;
-};
-
-exports.findValidatorInParams = findValidatorInParams;
-
-const findNominations = async (div, address, showAccountName) => {
-  console.log(["nomination search for controller: ", address]);
-  let targets = await api.getNomination(address);
-
-  if (!targets) {
-    console.log("searching in batch for nominations");
-    await sleep(1000);
-    targets = await api.getNominationFromBatch(address);
-
-    if (!targets) {
-      jQuery("#status").html("status: problem loading nominations");
-      return null;
-    }
-  }
-
-  let nominations = {};
-  console.log(targets);
-
-  for (let t of targets) {
-    console.log(t);
-    let validator = ss58Encode(fromHexString(t));
-    nominations[validator] = {
-      total: 0,
-      count: 0,
-      percent: 0,
-      splits: 0
-    };
-    let nomination_div = document.createElement('div');
-    div.appendChild(nomination_div);
-    nomination_div.className = "col-xs-12 col-sm-6 col-md-3 nom";
-    let name_div = document.createElement('div');
-    nomination_div.appendChild(name_div);
-    name_div.className = "long_name";
-    await displayAccount(name_div, fromHexString(t), showAccountName);
-
-    if (showAccountName) {
-      await sleep(1000);
-    }
-
-    let total_div = document.createElement('div');
-    nomination_div.appendChild(total_div);
-    total_div.id = validator + "_percent";
-    total_div.className = "nomination_percent col-sm-5";
-    total_div.innerHTML = "loading";
-    let count_div = document.createElement('div');
-    nomination_div.appendChild(count_div);
-    count_div.id = validator + "_count";
-    count_div.className = "nomination_count";
-    count_div.innerHTML = "eras active: 0";
-    let split_div = document.createElement('div');
-    nomination_div.appendChild(split_div);
-    split_div.id = validator + "_splits";
-    split_div.className = "nomination_confidence";
-    split_div.innerHTML = "confidence: high";
-  }
-
-  return nominations;
-};
-
-exports.findNominations = findNominations;
-
-const updateNominations = (stats, nominations) => {
-  let total = 0;
-
-  for (let validator in nominations) {
-    total += nominations[validator].total;
-  }
-
-  var el = document.getElementById('total');
-  el.innerHTML = stats.weekly_total / 1e12 + " KSM";
-
-  for (let validator in nominations) {
-    let n = nominations[validator];
-    n.percent = n.total / total * 100;
-    var el = document.getElementById(validator + '_percent');
-    el.innerHTML = n.percent.toFixed(2) + "%";
-    var el = document.getElementById(validator + '_count');
-    el.innerHTML = "eras active: " + n.count;
-    var el = document.getElementById(validator + '_splits');
-
-    if (n.splits == 0) {
-      el.innerHTML = "confidence: high";
-    } else {
-      if (n.splits == n.count) {
-        el.innerHTML = "confidence: low";
-      } else {
-        el.innerHTML = "confidence: medium";
-      }
-    }
-  }
-};
-
-const displayStaking = async (div, stash_address, nominations) => {
-  await sleep(1000);
-  var x = await api.getStaking(stash_address);
-  await sleep(1000);
-  const stats = {
-    weekly_total: 0
-  };
-
-  for (const r of x) {
-    console.log(r.extrinsic_hash); //let y = await api.getSearch(r.extrinsic_hash);
-    // get the transaction detail of this reward
-
-    let y = await api.getExtrinsic(r.extrinsic_hash);
-    await sleep(1000);
-    stats.weekly_total += parseInt(r.amount);
-    console.log(y); // events contain nominator addresses
-    // params contain validator_stash addresses, but sometimes these are batched
-    // - so we need to filter them to find the ones we have actually nominated
-    // two different forms are possible
-
-    if (y.data.call_module_function == "batch") {
-      let unique = []; // a list of mutltiple calls
-
-      for (let calls of y.data.params) {
-        for (let call of calls.value) {
-          let validator = findValidatorInParams(call.params); // validators can appear more than once
-
-          if (!unique.includes(validator)) {
-            unique.push(validator);
-          }
-        }
-      }
-
-      console.log("found: " + unique.length + " validators"); // count number of nominations we have
-
-      let count = 0;
-
-      for (let validator of unique) {
-        if (nominations[validator]) {
-          count += 1;
-        }
-      }
-
-      if (count > 0) {
-        console.log("found nominated validator in batched payout?"); //console.log(unique)
-        //console.log(nominations)
-      }
-
-      for (let validator of unique) {
-        if (nominations[validator]) {
-          let n = nominations[validator]; // biggest mystery is whether we can get which validator is our one
-          // if we have nomiated multiple in this set, then split the amount
-          // between them for the moment
-
-          n.total += parseInt(r.amount) / unique.length;
-
-          if (count > 1) {
-            n.splits += 1;
-          }
-
-          n.count += 1;
-          updateNominations(stats, nominations);
-        }
-      }
-    } else {
-      // or a single validator stash
-      let validator = findValidatorInParams(y.data.params);
-      let n = nominations[validator];
-
-      if (n) {
-        n.total += parseInt(r.amount);
-        n.count += 1;
-        updateNominations(stats, nominations);
-      }
-    }
-  }
-};
-
-exports.displayStaking = displayStaking;
-
-},{"./address.js":9,"./api.js":10,"./identicon.js":12,"./utils.js":14,"blakejs":4,"bs58":6,"jquery":7}],12:[function(require,module,exports){
+},{"./address.js":9,"./identicon.js":11,"./utils.js":14,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12404,16 +12008,236 @@ const identicon = (addr, sixPoint, size) => {
 
 exports.identicon = identicon;
 
-},{"./address.js":9,"blakejs":4}],13:[function(require,module,exports){
-const nn = require('./app.js')
+},{"./address.js":9,"blakejs":4}],12:[function(require,module,exports){
 const api = require('./api.js')
 const jQuery = require("jquery")
 const id = require('./identicon.js')
 const addr = require('./address.js')
 const utils = require('./utils.js')
+const search = require('./search.js')
 
 var stash_address = ""
 var controller_address = ""
+
+const getController = async (stash_address) => {
+    let results = await search.searchAddress(
+	0,stash_address,
+	{
+	    call_function: ["bond"],
+	    param: ["controller"]
+	});
+    console.log(results)
+    if (results.length>0) {
+	let value = results[0].value
+	if (value.Id) {
+	    return addr.ss58Encode(utils.fromHexString(value.Id))
+	} else {
+	    return addr.ss58Encode(utils.fromHexString(value))
+	}
+    }
+    return null
+}
+
+const getNominations = async (controller_address) => {
+    let results = await search.searchAddress(
+	0,controller_address,
+	{
+	    call_function: ["nominate"],
+	    param: ["targets"]
+	});
+    console.log(results)
+    let ret = []
+    if (results.length>0) {
+	for (let r of results) {
+	// the first one should be the most recent
+	    let value = r.value
+	    for (let v of value) {
+		if (v.Id) {
+		    ret.push(addr.ss58Encode(utils.fromHexString(v.Id)))
+		} else {
+		    ret.push(addr.ss58Encode(utils.fromHexString(v)))
+		}
+	    }
+	}
+    }
+    return ret
+}
+
+const displayAccount = async (div,address,showName) => {
+    div.appendChild(id.identicon(addr.ss58Decode(address), false, 30));	
+    let account
+    let name
+    if (showName) {
+	account = await api.getSearch(address)
+	name = account.data.account.account_display.display
+    }
+    if (!name || name=="") {
+	div.innerHTML+=address+"<br>";
+    } else {
+	div.className="short_name"
+	div.innerHTML+=name+"<br>";
+    }
+}
+
+const renderNominations = async (div,n,showAccountName) => {
+    let nominations = {}
+    for (let validator of n) {
+	
+	nominations[validator]={
+	    total: 0,
+	    count: 0,
+	    percent: 0,
+	    splits: 0,
+	}
+	
+	let nomination_div = document.createElement('div');				
+	div.appendChild(nomination_div)
+	nomination_div.className="col-xs-12 col-sm-6 col-md-3 nom"
+
+	let name_div = document.createElement('div');
+	nomination_div.appendChild(name_div);
+	name_div.className = "long_name"	
+	await displayAccount(name_div,validator,showAccountName)
+	
+	let total_div = document.createElement('div');
+	nomination_div.appendChild(total_div);
+	total_div.id=validator+"_percent"
+	total_div.className="nomination_percent col-sm-5"
+	total_div.innerHTML="loading"
+
+	let count_div = document.createElement('div');
+	nomination_div.appendChild(count_div);
+	count_div.id=validator+"_count"
+	count_div.className="nomination_count"
+	count_div.innerHTML="eras active: 0"
+	let split_div = document.createElement('div');
+	nomination_div.appendChild(split_div);
+	split_div.id=validator+"_splits"
+	split_div.className="nomination_confidence"
+	split_div.innerHTML="confidence: high"
+    }
+    return nominations;
+}
+
+const findValidatorInParams = (params) => {
+    let validator_stash
+    for (const p of params) {		
+	if (p.name=="validator_stash") {
+	    validator_stash=utils.fromHexString(p.value)
+	}
+    }
+    if (validator_stash) {
+	return addr.ss58Encode(validator_stash)
+    }
+    return null;
+}
+
+const updateNominations = (stats,nominations) => {
+    let total = 0
+    for (let validator in nominations) {
+	total+=nominations[validator].total
+    }
+
+    var el = document.getElementById('total');
+    el.innerHTML=stats.weekly_total/1e12+" KSM"
+
+    for (let validator in nominations) {
+	let n = nominations[validator]
+	n.percent = (n.total/total)*100
+	
+	var el = document.getElementById(validator+'_percent');
+	el.innerHTML=n.percent.toFixed(2)+"%"
+	var el = document.getElementById(validator+'_count');
+	el.innerHTML="eras active: "+n.count
+	var el = document.getElementById(validator+'_splits');
+	if (n.splits==0) {
+	    el.innerHTML="confidence: high"
+	} else {
+	    if (n.splits==n.count) {
+		el.innerHTML="confidence: low"
+	    } else {
+		el.innerHTML="confidence: medium"
+	    }
+	}
+	
+    }
+}
+
+const displayStaking = async (div,stash_address,nominations) => {
+    var x = await api.getStaking(stash_address);
+    const stats = { weekly_total: 0 };
+    for (const r of x) {
+	console.log(r.extrinsic_hash)
+	//let y = await api.getSearch(r.extrinsic_hash);
+	// get the transaction detail of this reward
+	let y = await api.getExtrinsic(r.extrinsic_hash);
+
+	stats.weekly_total += parseInt(r.amount)
+	console.log(y);
+	
+	// events contain nominator addresses
+	// params contain validator_stash addresses, but sometimes these are batched
+	// - so we need to filter them to find the ones we have actually nominated
+	
+	// two different forms are possible
+	if (y.data.call_module_function=="batch") {
+	    let unique = []
+	    // a list of mutltiple calls
+	    for (let calls of y.data.params) {
+		for (let call of calls.value) {
+		    let validator=findValidatorInParams(call.params)
+		    // validators can appear more than once
+		    if (!unique.includes(validator)) {
+			unique.push(validator)
+		    }
+		}
+	    }
+
+	    console.log("found: "+unique.length+" validators")
+	    
+	    // count number of nominations we have
+	    let count=0
+	    for (let validator of unique) {
+		if (nominations[validator]) {
+		    count+=1;
+		}
+	    }
+
+	    if (count>0) {
+		console.log("found nominated validator in batched payout?");
+		//console.log(unique)
+		//console.log(nominations)
+	    }
+	    
+	    for (let validator of unique) {
+		if (nominations[validator]) {
+		    let n = nominations[validator]
+		    // biggest mystery is whether we can get which validator is our one
+		    // if we have nomiated multiple in this set, then split the amount
+		    // between them for the moment
+		    n.total+=parseInt(r.amount)/unique.length
+		    if (count>1) {
+			n.splits+=1
+		    }
+		    n.count+=1
+		    updateNominations(stats,nominations)							
+		}
+	    }
+	} else {
+	    // or a single validator stash
+	    let validator=findValidatorInParams(y.data.params)
+
+	    let n = nominations[validator]
+	    if (n) {
+		n.total+=parseInt(r.amount)					
+		n.count+=1
+		updateNominations(stats,nominations)
+	    }
+	}
+    }
+}
+
+
 
 const stashAddr = async () => {
     stash_address = jQuery("#stash_address").val()
@@ -12426,43 +12250,124 @@ const stashAddr = async () => {
     } else {
 	jQuery("#stash_icon").empty();
 	jQuery("#stash_icon").append(id.identicon(a, false, 50))
-	controller_address = await api.getController(stash_address)
+	controller_address = await getController(stash_address)
+	console.log(controller_address)
 	if (!controller_address) {
-	    console.log("searching in batch for controller")
-	    // try another approach
-	    await utils.sleep(1000); 
-	    controller_address = await api.getControllerFromBatch(stash_address)
-	    if (!controller_address) {
-		jQuery("#status").html("status: couldn't find controller")
-		return
-	    }
+	    jQuery("#status").html("status: couldn't find controller")
+	    return
 	}
-	jQuery("#status").html("status: ready")
-	jQuery("#start").prop('disabled', false);
-	console.log(controller_address);
-    }
-}
 
-const run = async () => {
-    jQuery("#nominations").empty();
-    jQuery("#status").html("status: loading nominations")
-    var el = document.getElementById('nominations');
-    nominations = await nn.findNominations(el,controller_address,false)
-    console.log(nominations);
-    if (nominations) {
+	jQuery("#nominations").empty();
+	jQuery("#status").html("status: loading nominations")
+	var el = document.getElementById('nominations');
+	let n = await getNominations(controller_address)
+	console.log(n.length)
+	if (n.length==0) {
+	    jQuery("#status").html("status: no nominations found")
+	    return
+	}
+
+	nominations = await renderNominations(el, n, true);	
 	jQuery("#status").html("status: loading rewards")
 	var el = document.getElementById('reward-slash');
-	await nn.displayStaking(el,stash_address,nominations)
+	await displayStaking(el,stash_address,nominations)
 	jQuery("#status").html("status: finished")
     }
 }
 
+const run = async () => {
+}
+
 // connect up the things
 jQuery("#stash_address").change(stashAddr);
-jQuery("#start").click(run);
+//jQuery("#start").click(run);
 
 
-},{"./address.js":9,"./api.js":10,"./app.js":11,"./identicon.js":12,"./utils.js":14,"jquery":7}],14:[function(require,module,exports){
+},{"./address.js":9,"./api.js":10,"./identicon.js":11,"./search.js":13,"./utils.js":14,"jquery":7}],13:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.searchAddress = void 0;
+
+const jQuery = require("jquery");
+
+const {
+  ss58Encode,
+  ss58Decode
+} = require('./address.js');
+
+const api = require('./api.js');
+
+const {
+  fromHexString
+} = require('./utils.js');
+
+var max_depth = 4; // search params :
+// {
+//   call_function: [a,b],
+//   param: [x,y,z]
+// }
+
+const searchParams = async (depth, time, call_module, call_function, params, search_params) => {
+  let ret = [];
+
+  for (let param of params) {
+    // recur into all batch calls
+    if ((call_function == "batch" || call_function == "batch_all") && param.name == "calls") {
+      let count = 0;
+
+      for (let call of param.value) {
+        ret = ret.concat(await searchBatchCall(depth, time, call, search_params));
+      }
+    } // check search condition
+
+
+    if (search_params.call_function.includes(call_function) && search_params.param.includes(param.name)) {
+      ret.push({
+        time: time,
+        value: param.value,
+        name: param.name,
+        call_function: call_function,
+        call_module: call_module
+      });
+    }
+  }
+
+  return ret;
+};
+
+const searchBatchCall = async (depth, time, call, search_params) => {
+  if (depth > max_depth) return []; // sometimes args are params and vice versa
+
+  let args = call.call_args;
+  if (!args) args = call.params;
+  return await searchParams(depth + 1, time, call.call_module, call.call_function, args, search_params);
+};
+
+const searchExtrinsic = async (depth, x, search_params) => {
+  if (depth > max_depth) return [];
+  return await searchParams(depth, x.block_timestamp, x.call_module, x.call_module_function, JSON.parse(x.params), search_params);
+};
+
+const searchAddress = async (depth, address, search_params) => {
+  let ret = [];
+  if (depth > max_depth) return ret;
+  let xs = await api.getExtrinsics(address);
+
+  if (xs.data.count > 0) {
+    for (let x of xs.data.extrinsics) {
+      ret = ret.concat(await searchExtrinsic(depth + 1, x, search_params));
+    }
+  }
+
+  return ret;
+};
+
+exports.searchAddress = searchAddress;
+
+},{"./address.js":9,"./api.js":10,"./utils.js":14,"jquery":7}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14508,4 +14413,4 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}]},{},[13]);
+},{}]},{},[12]);
