@@ -54,14 +54,23 @@ const searchBatchCall = async (depth,time,call,search_params) => {
 
 const searchExtrinsic = async (depth,x,search_params) => {
     if (depth>max_depth) return []
-    return await searchParams(depth,
-			      x.block_timestamp,
-			      x.call_module,
-			      x.call_module_function,
-			      JSON.parse(x.params),
-			      search_params)
+
+    let args = x.call_args    
+    if (!args) args = x.params
+    args = JSON.parse(args)
+    if (args) {
+	return await searchParams(depth,
+				  x.block_timestamp,
+				  x.call_module,
+				  x.call_module_function,
+				  args,
+				  search_params)
+    }
+    return []
 }
 
+// not actually doing depth search now, but leaving depth
+// in in case we turn it on again
 const searchAddress = async (depth,address,search_params) => {
     let ret=[]
     if (depth>max_depth) return ret

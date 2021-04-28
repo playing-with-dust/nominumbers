@@ -5,27 +5,27 @@ const addr = require('./address.js')
 const utils = require('./utils.js')
 const search = require('./search.js')
 
-var stash_address = ""
-var controller_address = ""
 var balance = 0
 
-const getController = async (stash_address) => {
+const getControllers = async (stash_address) => {
     let results = await search.searchAddress(
 	0,stash_address,
 	{
-	    call_function: ["bond"],
+	    call_function: ["bond","set_controller"],
+	    // can have multiple controllers (over time)
 	    param: ["controller"]
 	});
-
+    let ret=[]
     if (results.length>0) {
-	let value = results[0].value
-	if (value.Id) {
-	    return addr.ss58Encode(utils.fromHexString(value.Id))
-	} else {
-	    return addr.ss58Encode(utils.fromHexString(value))
+	for (let r of results) {
+	    if (r.value.Id) {
+		ret.push(addr.ss58Encode(utils.fromHexString(r.value.Id)))
+	    } else {
+		ret.push(addr.ss58Encode(utils.fromHexString(r.value)))
+	    }
 	}
     }
-    return null
+    return ret
 }
 
 const getNominations = async (controller_address) => {
@@ -130,13 +130,18 @@ const findValidatorInParams = (params) => {
     return null;
 }
 
-// calculation in KSM
 const update_apy = (total_payout,num_eras) => {
-    let d=(total_payout/balance)*100
-    console.log([total_payout,balance,d])
-    let eras_per_day = 4
-    let apy = (d*eras_per_day*365)/num_eras    
-    jQuery("#apy").html(apy.toFixed(2)+"% APY")
+    if (balance && balance>0) {
+	// balance is (bonded) amount we have *now*
+	// get the percentage of this that we know comes from payouts
+	let payout_percent=(total_payout/balance)*100
+	// get this as average per era
+	payout_percent/=num_eras
+	// multiply up to number of eras in a year
+	let eras_per_day = 4
+	let apy = payout_percent*eras_per_day*365    
+	jQuery("#apy").html(apy.toFixed(2)+"% APY")
+    }
 }
 
 
@@ -149,7 +154,7 @@ const updateNominations = (stats,nominations) => {
     var el = document.getElementById('total');
     el.innerHTML=stats.weekly_total/1e12+" KSM"
 
-    update_apy(stats.weekly_total/1e12,stats.num_eras)
+    update_apy(stats.weekly_total,stats.num_eras)
 
     for (let validator in nominations) {
 	let n = nominations[validator]
@@ -193,7 +198,9 @@ const displayStaking = async (div,stash_address,nominations) => {
 	    // a list of mutltiple calls
 	    for (let calls of y.data.params) {
 		for (let call of calls.value) {
-		    let validator=findValidatorInParams(call.params)
+		    let args = call.call_args
+		    if (!args) args = call.params
+		    let validator=findValidatorInParams(args)
 		    // validators can appear more than once
 		    if (!unique.includes(validator)) {
 			unique.push(validator)
@@ -237,24 +244,23 @@ const displayStaking = async (div,stash_address,nominations) => {
 }
 
 const stashAddr = async () => {
-    stash_address = jQuery("#stash_address").val()
+    let stash_address = jQuery("#stash_address").val()
     jQuery("#nominations").empty();
     jQuery("#start").prop('disabled', true);
+    jQuery("#status").html("status: searching for controller")
 
     let account = await api.getSearch(stash_address)
-    console.log(account.data)
-    balance = parseFloat(account.data.account.balance)
+    balance = parseFloat(account.data.account.bonded)
     
-    jQuery("#status").html("status: searching for controller")
     let a = addr.ss58Decode(stash_address)	
     if (!a) {
 	jQuery("#status").html("status: address error")
     } else {
 	jQuery("#stash_icon").empty();
 	jQuery("#stash_icon").append(id.identicon(a, false, 50))
-	controller_address = await getController(stash_address)
+	let controller_addresses = await getControllers(stash_address)
 
-	if (!controller_address) {
+	if (controller_addresses.length==0) {
 	    jQuery("#status").html("status: couldn't find controller")
 	    return
 	}
@@ -262,13 +268,16 @@ const stashAddr = async () => {
 	jQuery("#nominations").empty();
 	jQuery("#status").html("status: loading nominations")
 	var el = document.getElementById('nominations');
-	let n = await getNominations(controller_address)
-
+	let n = []
+	for (let c of controller_addresses) {
+	    n=n.concat(await getNominations(c))
+	}
+	
 	if (n.length==0) {
 	    jQuery("#status").html("status: no nominations found")
 	    return
 	}
-
+	
 	nominations = await renderNominations(el, n, true);	
 	jQuery("#status").html("status: loading rewards")
 	var el = document.getElementById('reward-slash');
@@ -276,11 +285,7 @@ const stashAddr = async () => {
 	jQuery("#status").html("status: finished")
     }
 }
-
-const run = async () => {
-}
-
+    
 // connect up the things
 jQuery("#stash_address").change(stashAddr);
-//jQuery("#start").click(run);
 

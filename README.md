@@ -26,6 +26,14 @@ nominations that are not activated much, so perhaps this doesn't
 matter.
 
 ## [Try it here](https://playing-with-dust.github.io/nominumbers/)
+
+## Notes:
+
+* APY is an estimate - e.g. if your bonded value has changed in the
+  last 28 eras it will be incorrect.
+* Currently it loads all nominations found - this is partly a debug
+  measure to make sure we get them all, the fix will be to reduce this
+  to the last nomination call. 
  
 ## Building
 
@@ -36,5 +44,4 @@ matter.
 * Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
 * Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
-x
 
