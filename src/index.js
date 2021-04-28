@@ -41,10 +41,18 @@ const getNominations = async (controller_address) => {
 	// the first one should be the most recent
 	    let value = r.value
 	    for (let v of value) {
+		let a
 		if (v.Id) {
-		    ret.push(addr.ss58Encode(utils.fromHexString(v.Id)))
+		    a = addr.ss58Encode(utils.fromHexString(v.Id))
 		} else {
-		    ret.push(addr.ss58Encode(utils.fromHexString(v)))
+		    a = addr.ss58Encode(utils.fromHexString(v))
+		}
+		// the same validator can be in multiple nomination calls
+		// (I guess each nomination resets the previous ones but
+		// we need to collect em all, just in case we get some
+		// payouts from them in our sample)
+		if (!ret.includes(a)) {
+		    ret.push(a)
 		}
 	    }
 	}

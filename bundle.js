@@ -11745,28 +11745,47 @@ const {
 
 const jQuery = require("jquery");
 
+var max_calls = 25; // don't ddos subscan
+
 const callApi = async (url, body, fn) => {
   console.log("calling: " + url); // we have to throttle the bandwidth
 
-  await sleep(400);
-  const location = window.location.hostname;
-  const settings = {
-    method: 'POST',
-    mode: 'cors',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  };
+  await sleep(300);
+  let data;
+  let result = false;
+  let num_tries = 0;
 
-  try {
-    const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/` + url, settings);
-    const data = await fetchResponse.json();
-    return fn(data);
-  } catch (e) {
-    return e;
+  while (!result && num_tries < max_calls) {
+    const location = window.location.hostname;
+    const settings = {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    };
+
+    try {
+      const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/` + url, settings);
+      data = await fetchResponse.json();
+      result = true;
+    } catch (e) {
+      console.log("error talking to subscan");
+      console.log(e); // wait a bit and try again
+
+      await sleep(500);
+    }
+
+    if (result) {
+      return fn(data);
+    }
+
+    num_tries += 1;
   }
+
+  return null;
 };
 
 const getStaking = async address => {
@@ -12052,10 +12071,18 @@ const getNominations = async (controller_address) => {
 	// the first one should be the most recent
 	    let value = r.value
 	    for (let v of value) {
+		let a
 		if (v.Id) {
-		    ret.push(addr.ss58Encode(utils.fromHexString(v.Id)))
+		    a = addr.ss58Encode(utils.fromHexString(v.Id))
 		} else {
-		    ret.push(addr.ss58Encode(utils.fromHexString(v)))
+		    a = addr.ss58Encode(utils.fromHexString(v))
+		}
+		// the same validator can be in multiple nomination calls
+		// (I guess each nomination resets the previous ones but
+		// we need to collect em all, just in case we get some
+		// payouts from them in our sample)
+		if (!ret.includes(a)) {
+		    ret.push(a)
 		}
 	    }
 	}

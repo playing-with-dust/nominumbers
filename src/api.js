@@ -5,29 +5,42 @@ const {identicon} = require('./identicon.js')
 const {fromHexString,sleep} = require('./utils.js')
 const jQuery = require("jquery")
 
+var max_calls = 25 // don't ddos subscan
 
 const callApi = async (url,body,fn) => {
     console.log("calling: "+url)
     // we have to throttle the bandwidth
-    await sleep(400);
-
-    const location = window.location.hostname;
-    const settings = {
-        method: 'POST',
-	mode: 'cors',
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+    await sleep(300);
+    let data
+    let result=false
+    let num_tries=0
+    while (!result && num_tries<max_calls) {
+	const location = window.location.hostname;
+	const settings = {
+            method: 'POST',
+	    mode: 'cors',
+            headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
         },
-	body: JSON.stringify(body)
+	    body: JSON.stringify(body)
+	}
+	try {
+            const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/`+url, settings);
+            data = await fetchResponse.json();
+	    result = true
+	} catch (e) {
+	    console.log("error talking to subscan");
+	    console.log(e);
+	    // wait a bit and try again
+	    await sleep(500);
+	}
+	if (result) {
+	    return fn(data);
+	}
+	num_tries+=1
     }
-    try {
-        const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/`+url, settings);
-        const data = await fetchResponse.json();
-	return fn(data);
-    } catch (e) {
-        return e;
-    }	
+    return null
 }
 
 const getStaking = async (address) => {
