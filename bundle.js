@@ -12037,6 +12037,7 @@ const search = require('./search.js')
 
 var stash_address = ""
 var controller_address = ""
+var balance = 0
 
 const getController = async (stash_address) => {
     let results = await search.searchAddress(
@@ -12045,7 +12046,7 @@ const getController = async (stash_address) => {
 	    call_function: ["bond"],
 	    param: ["controller"]
 	});
-    console.log(results)
+
     if (results.length>0) {
 	let value = results[0].value
 	if (value.Id) {
@@ -12064,7 +12065,7 @@ const getNominations = async (controller_address) => {
 	    call_function: ["nominate"],
 	    param: ["targets"]
 	});
-    console.log(results)
+
     let ret = []
     if (results.length>0) {
 	for (let r of results) {
@@ -12119,7 +12120,7 @@ const renderNominations = async (div,n,showAccountName) => {
 	
 	let nomination_div = document.createElement('div');				
 	div.appendChild(nomination_div)
-	nomination_div.className="col-xs-12 col-sm-6 col-md-3 nom"
+	nomination_div.className="col-xs-12 col-sm-6 col-md-4 col-lg-3 nom"
 
 	let name_div = document.createElement('div');
 	nomination_div.appendChild(name_div);
@@ -12130,7 +12131,7 @@ const renderNominations = async (div,n,showAccountName) => {
 	nomination_div.appendChild(total_div);
 	total_div.id=validator+"_percent"
 	total_div.className="nomination_percent col-sm-5"
-	total_div.innerHTML="loading"
+	total_div.innerHTML="..."
 
 	let count_div = document.createElement('div');
 	nomination_div.appendChild(count_div);
@@ -12159,6 +12160,16 @@ const findValidatorInParams = (params) => {
     return null;
 }
 
+// calculation in KSM
+const update_apy = (total_payout,num_eras) => {
+    let d=(total_payout/balance)*100
+    console.log([total_payout,balance,d])
+    let eras_per_day = 4
+    let apy = (d*eras_per_day*365)/num_eras    
+    jQuery("#apy").html(apy.toFixed(2)+"% APY")
+}
+
+
 const updateNominations = (stats,nominations) => {
     let total = 0
     for (let validator in nominations) {
@@ -12168,9 +12179,12 @@ const updateNominations = (stats,nominations) => {
     var el = document.getElementById('total');
     el.innerHTML=stats.weekly_total/1e12+" KSM"
 
+    update_apy(stats.weekly_total/1e12,stats.num_eras)
+
     for (let validator in nominations) {
 	let n = nominations[validator]
 	n.percent = (n.total/total)*100
+
 	
 	var el = document.getElementById(validator+'_percent');
 	el.innerHTML=n.percent.toFixed(2)+"%"
@@ -12192,22 +12206,19 @@ const updateNominations = (stats,nominations) => {
 
 const displayStaking = async (div,stash_address,nominations) => {
     var x = await api.getStaking(stash_address);
-    const stats = { weekly_total: 0 };
+    const stats = { weekly_total: 0, num_eras: 0 };
     for (const r of x) {
-	console.log(r.extrinsic_hash)
-	//let y = await api.getSearch(r.extrinsic_hash);
 	// get the transaction detail of this reward
 	let y = await api.getExtrinsic(r.extrinsic_hash);
 
 	stats.weekly_total += parseInt(r.amount)
-	console.log(y);
+	stats.num_eras += 1
 	
-	// events contain nominator addresses
-	// params contain validator_stash addresses, but sometimes these are batched
-	// - so we need to filter them to find the ones we have actually nominated
-	
-	// two different forms are possible
+	// payout extrinsics contain nominator addresses in their params
+	// (validator_stash), we need to deal with batched payouts too
 	if (y.data.call_module_function=="batch") {
+	    // we need to filter the validators to find the ones we
+	    // have actually nominated previously
 	    let unique = []
 	    // a list of mutltiple calls
 	    for (let calls of y.data.params) {
@@ -12220,20 +12231,12 @@ const displayStaking = async (div,stash_address,nominations) => {
 		}
 	    }
 
-	    console.log("found: "+unique.length+" validators")
-	    
-	    // count number of nominations we have
+	    // count the number of nominations we have
 	    let count=0
 	    for (let validator of unique) {
 		if (nominations[validator]) {
 		    count+=1;
 		}
-	    }
-
-	    if (count>0) {
-		console.log("found nominated validator in batched payout?");
-		//console.log(unique)
-		//console.log(nominations)
 	    }
 	    
 	    for (let validator of unique) {
@@ -12241,7 +12244,7 @@ const displayStaking = async (div,stash_address,nominations) => {
 		    let n = nominations[validator]
 		    // biggest mystery is whether we can get which validator is our one
 		    // if we have nomiated multiple in this set, then split the amount
-		    // between them for the moment
+		    // between them equally (for the moment)
 		    n.total+=parseInt(r.amount)/unique.length
 		    if (count>1) {
 			n.splits+=1
@@ -12251,9 +12254,8 @@ const displayStaking = async (div,stash_address,nominations) => {
 		}
 	    }
 	} else {
-	    // or a single validator stash
+	    // or a single validator stash - easy!
 	    let validator=findValidatorInParams(y.data.params)
-
 	    let n = nominations[validator]
 	    if (n) {
 		n.total+=parseInt(r.amount)					
@@ -12264,12 +12266,15 @@ const displayStaking = async (div,stash_address,nominations) => {
     }
 }
 
-
-
 const stashAddr = async () => {
     stash_address = jQuery("#stash_address").val()
     jQuery("#nominations").empty();
     jQuery("#start").prop('disabled', true);
+
+    let account = await api.getSearch(stash_address)
+    console.log(account.data)
+    balance = parseFloat(account.data.account.balance)
+    
     jQuery("#status").html("status: searching for controller")
     let a = addr.ss58Decode(stash_address)	
     if (!a) {
@@ -12278,7 +12283,7 @@ const stashAddr = async () => {
 	jQuery("#stash_icon").empty();
 	jQuery("#stash_icon").append(id.identicon(a, false, 50))
 	controller_address = await getController(stash_address)
-	console.log(controller_address)
+
 	if (!controller_address) {
 	    jQuery("#status").html("status: couldn't find controller")
 	    return
@@ -12288,7 +12293,7 @@ const stashAddr = async () => {
 	jQuery("#status").html("status: loading nominations")
 	var el = document.getElementById('nominations');
 	let n = await getNominations(controller_address)
-	console.log(n.length)
+
 	if (n.length==0) {
 	    jQuery("#status").html("status: no nominations found")
 	    return
