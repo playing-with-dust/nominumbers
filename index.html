@@ -12,18 +12,29 @@
 <body>
   <div id="container" class="container" style="width: 100%;">
 	<div class="row">
-	  <h3>🤖 nominumbers: your weekly (experimental) kusama staking analysis v0.2</h3>
+	  <h3>🤖 nominumbers (beta): your weekly kusama staking analysis v0.3</h3>
 	</div>
 	<div id="top" class="row">
 	  <div id="stash" class="col-xs-12 col-sm-6 col-md-8">
-		<div class="row">
-		  <div id="stash_icon" style="width:70px; border: 1px solid grey; background: white;"></div>
-		  <input id="stash_address" placeholder="stash address" type="text" style="height:50px;" class="col-10"></input>
-		</div>
+	    <div class="row">
+	      <div class="col-2">
+		<div id="stash_icon"></div>
+	      </div>
+	      <div class="col-10">
+		<input id="stash_address" placeholder="stash address" type="text" style="height:50px; border: none; width:100%"></input>
+	      </div>
+	    </div>
 	  </div>
-	  <div class="col-xs-12 col-sm-6 col-md-4">
-		<div id="apy" class="total">0.00% APY</div>
-		<div id="total" class="total">0.00000000 KSM</div>
+	  <div class="col-xs-12 col-sm-6 col-md-4 out">
+	    <table class="table">
+	      <tbody>
+		<tr>
+		  <td><b>APY</b></td><td id="apy">0.00%</td>
+		</tr><tr>
+		  <td><b>total reward</b></td><td id="total">0.00000000 KSM</td>
+		</tr>
+	      </tbody>
+	    </table>
 	  </div>
 	</div>
 	<div class="row">
@@ -31,12 +42,24 @@
 	    <div id="status">status: ready</div>
 	  </div>
 	</div>
-	<div id="nominations" class="row">
-	</div>
+	
+	<table id="nominations" class="col-12 table table-striped">
+	  <thead>
+	    <tr>
+	      <th scope="col">icon</th>
+	      <th scope="col">validator</th>
+	      <th scope="col">percentage</th>
+	      <th scope="col">eras active</th>
+	      <th scope="col">confidence</th>
+	    </tr>
+	  </thead>
+	  <tbody>
+	  </tbody>
+	</table>
 	<hr>
 	<p>
 	  This app reads <a href="https://kusama.subscan.io/">subscan</a>
-	  and tries collect your total rewards from the last week (28
+	  and tries to collect your total rewards from the last week (28
 	  eras) for each validator you currenty nominate, and display it
 	  as a percentage. The idea is to provide a bit of info on how
 	  your nomination mix is working.

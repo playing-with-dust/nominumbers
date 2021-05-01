@@ -1,9 +1,10 @@
 const api = require('./api.js')
-const jQuery = require("jquery")
+const $ = require("jquery")
 const id = require('./identicon.js')
 const addr = require('./address.js')
 const utils = require('./utils.js')
 const search = require('./search.js')
+const sort = require('./sort.js')
 
 var balance = 0
 
@@ -61,8 +62,8 @@ const getNominations = async (controller_address) => {
     return ret
 }
 
-const displayAccount = async (div,address,showName) => {
-    div.appendChild(id.identicon(addr.ss58Decode(address), false, 30));	
+const displayAccount = async (icondiv,namediv,address,showName) => {
+    icondiv.append(id.identicon(addr.ss58Decode(address), false, 30))	
     let account
     let name
     if (showName) {
@@ -70,10 +71,10 @@ const displayAccount = async (div,address,showName) => {
 	name = account.data.account.account_display.display
     }
     if (!name || name=="") {
-	div.innerHTML+=address+"<br>";
+	namediv.attr("class","long_name")
+	namediv.html(address);
     } else {
-	div.className="short_name"
-	div.innerHTML+=name+"<br>";
+	namediv.html(name);
     }
 }
 
@@ -87,32 +88,23 @@ const renderNominations = async (div,n,showAccountName) => {
 	    percent: 0,
 	    splits: 0,
 	}
-	
-	let nomination_div = document.createElement('div');				
-	div.appendChild(nomination_div)
-	nomination_div.className="col-xs-12 col-sm-6 col-md-4 col-lg-3 nom"
 
-	let name_div = document.createElement('div');
-	nomination_div.appendChild(name_div);
-	name_div.className = "long_name"	
-	await displayAccount(name_div,validator,showAccountName)
+	$("#nominations")
+	    .append($('<tr>')
+		    .append($('<td>').attr('id',validator+'_icon'))
+		    .append($('<td>').attr('id',validator+'_id'))
+		    .append($('<td>').attr('id',validator+'_percent')
+			    .html("..."))
+		    .append($('<td>').attr('id',validator+'_count')
+			    .html("0"))
+		    .append($('<td>').attr('id',validator+'_splits')
+			    .html("high"))
+		   );
 	
-	let total_div = document.createElement('div');
-	nomination_div.appendChild(total_div);
-	total_div.id=validator+"_percent"
-	total_div.className="nomination_percent col-sm-5"
-	total_div.innerHTML="..."
-
-	let count_div = document.createElement('div');
-	nomination_div.appendChild(count_div);
-	count_div.id=validator+"_count"
-	count_div.className="nomination_count"
-	count_div.innerHTML="eras active: 0"
-	let split_div = document.createElement('div');
-	nomination_div.appendChild(split_div);
-	split_div.id=validator+"_splits"
-	split_div.className="nomination_confidence"
-	split_div.innerHTML="confidence: high"
+	await displayAccount(
+	    $('#'+validator+'_icon'),
+	    $('#'+validator+'_id'),
+	    validator,showAccountName)
     }
     return nominations;
 }
@@ -140,7 +132,7 @@ const update_apy = (total_payout,num_eras) => {
 	// multiply up to number of eras in a year
 	let eras_per_day = 4
 	let apy = payout_percent*eras_per_day*365    
-	jQuery("#apy").html(apy.toFixed(2)+"% APY")
+	$("#apy").html(apy.toFixed(2)+"%")
     }
 }
 
@@ -159,24 +151,21 @@ const updateNominations = (stats,nominations) => {
     for (let validator in nominations) {
 	let n = nominations[validator]
 	n.percent = (n.total/total)*100
-
 	
-	var el = document.getElementById(validator+'_percent');
-	el.innerHTML=n.percent.toFixed(2)+"%"
-	var el = document.getElementById(validator+'_count');
-	el.innerHTML="eras active: "+n.count
-	var el = document.getElementById(validator+'_splits');
+	$('#'+validator+'_percent').html(n.percent.toFixed(2)+"%")
+	$('#'+validator+'_count').html(n.count)
 	if (n.splits==0) {
-	    el.innerHTML="confidence: high"
+	    $('#'+validator+'_splits').html("high")
 	} else {
 	    if (n.splits==n.count) {
-		el.innerHTML="confidence: low"
+		$('#'+validator+'_splits').html("low")
 	    } else {
-		el.innerHTML="confidence: medium"
+		$('#'+validator+'_splits').html("medium")
 	    }
-	}
-	
+	}	
     }
+
+    sort.sortTable("nominations",2)
 }
 
 const displayStaking = async (div,stash_address,nominations) => {
@@ -244,29 +233,29 @@ const displayStaking = async (div,stash_address,nominations) => {
 }
 
 const stashAddr = async () => {
-    let stash_address = jQuery("#stash_address").val()
-    jQuery("#nominations").empty();
-    jQuery("#start").prop('disabled', true);
-    jQuery("#status").html("status: searching for controller")
+    let stash_address = $("#stash_address").val()
+    //$("#nominations tbody").empty();
+    $("#start").prop('disabled', true);
+    $("#status").html("status: searching for controller")
 
     let account = await api.getSearch(stash_address)
     balance = parseFloat(account.data.account.bonded)
     
     let a = addr.ss58Decode(stash_address)	
     if (!a) {
-	jQuery("#status").html("status: address error")
+	$("#status").html("status: address error")
     } else {
-	jQuery("#stash_icon").empty();
-	jQuery("#stash_icon").append(id.identicon(a, false, 50))
+	$("#stash_icon").empty();
+	$("#stash_icon").append(id.identicon(a, false, 50))
 	let controller_addresses = await getControllers(stash_address)
 
 	if (controller_addresses.length==0) {
-	    jQuery("#status").html("status: couldn't find controller")
+	    $("#status").html("status: couldn't find controller")
 	    return
 	}
 
-	jQuery("#nominations").empty();
-	jQuery("#status").html("status: loading nominations")
+	//$("#nominations tbody").empty();
+	$("#status").html("status: loading nominations")
 	var el = document.getElementById('nominations');
 	let n = []
 	for (let c of controller_addresses) {
@@ -274,18 +263,17 @@ const stashAddr = async () => {
 	}
 	
 	if (n.length==0) {
-	    jQuery("#status").html("status: no nominations found")
+	    $("#status").html("status: no nominations found")
 	    return
 	}
 	
 	nominations = await renderNominations(el, n, true);	
-	jQuery("#status").html("status: loading rewards")
+	$("#status").html("status: loading rewards")
 	var el = document.getElementById('reward-slash');
 	await displayStaking(el,stash_address,nominations)
-	jQuery("#status").html("status: finished")
+	$("#status").html("status: finished")
     }
 }
     
 // connect up the things
-jQuery("#stash_address").change(stashAddr);
-
+$("#stash_address").change(stashAddr);

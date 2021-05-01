@@ -692,7 +692,7 @@ module.exports = {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":16}],6:[function(require,module,exports){
+},{"buffer":17}],6:[function(require,module,exports){
 var basex = require('base-x')
 var ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -11648,7 +11648,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":16}],9:[function(require,module,exports){
+},{"buffer":17}],9:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -11715,7 +11715,7 @@ const ss58Decode = address => {
 exports.ss58Decode = ss58Decode;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"blakejs":4,"bs58":6,"buffer":16}],10:[function(require,module,exports){
+},{"blakejs":4,"bs58":6,"buffer":17}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11881,7 +11881,7 @@ const getExtrinsic = async hash => {
 
 exports.getExtrinsic = getExtrinsic;
 
-},{"./address.js":9,"./identicon.js":11,"./utils.js":14,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
+},{"./address.js":9,"./identicon.js":11,"./utils.js":15,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12029,11 +12029,12 @@ exports.identicon = identicon;
 
 },{"./address.js":9,"blakejs":4}],12:[function(require,module,exports){
 const api = require('./api.js')
-const jQuery = require("jquery")
+const $ = require("jquery")
 const id = require('./identicon.js')
 const addr = require('./address.js')
 const utils = require('./utils.js')
 const search = require('./search.js')
+const sort = require('./sort.js')
 
 var balance = 0
 
@@ -12055,7 +12056,6 @@ const getControllers = async (stash_address) => {
 	    }
 	}
     }
-    console.log(ret)
     return ret
 }
 
@@ -12092,8 +12092,8 @@ const getNominations = async (controller_address) => {
     return ret
 }
 
-const displayAccount = async (div,address,showName) => {
-    div.appendChild(id.identicon(addr.ss58Decode(address), false, 30));	
+const displayAccount = async (icondiv,namediv,address,showName) => {
+    icondiv.append(id.identicon(addr.ss58Decode(address), false, 30))	
     let account
     let name
     if (showName) {
@@ -12101,10 +12101,10 @@ const displayAccount = async (div,address,showName) => {
 	name = account.data.account.account_display.display
     }
     if (!name || name=="") {
-	div.innerHTML+=address+"<br>";
+	namediv.attr("class","long_name")
+	namediv.html(address);
     } else {
-	div.className="short_name"
-	div.innerHTML+=name+"<br>";
+	namediv.html(name);
     }
 }
 
@@ -12118,32 +12118,23 @@ const renderNominations = async (div,n,showAccountName) => {
 	    percent: 0,
 	    splits: 0,
 	}
-	
-	let nomination_div = document.createElement('div');				
-	div.appendChild(nomination_div)
-	nomination_div.className="col-xs-12 col-sm-6 col-md-4 col-lg-3 nom"
 
-	let name_div = document.createElement('div');
-	nomination_div.appendChild(name_div);
-	name_div.className = "long_name"	
-	await displayAccount(name_div,validator,showAccountName)
+	$("#nominations")
+	    .append($('<tr>')
+		    .append($('<td>').attr('id',validator+'_icon'))
+		    .append($('<td>').attr('id',validator+'_id'))
+		    .append($('<td>').attr('id',validator+'_percent')
+			    .html("..."))
+		    .append($('<td>').attr('id',validator+'_count')
+			    .html("0"))
+		    .append($('<td>').attr('id',validator+'_splits')
+			    .html("high"))
+		   );
 	
-	let total_div = document.createElement('div');
-	nomination_div.appendChild(total_div);
-	total_div.id=validator+"_percent"
-	total_div.className="nomination_percent col-sm-5"
-	total_div.innerHTML="..."
-
-	let count_div = document.createElement('div');
-	nomination_div.appendChild(count_div);
-	count_div.id=validator+"_count"
-	count_div.className="nomination_count"
-	count_div.innerHTML="eras active: 0"
-	let split_div = document.createElement('div');
-	nomination_div.appendChild(split_div);
-	split_div.id=validator+"_splits"
-	split_div.className="nomination_confidence"
-	split_div.innerHTML="confidence: high"
+	await displayAccount(
+	    $('#'+validator+'_icon'),
+	    $('#'+validator+'_id'),
+	    validator,showAccountName)
     }
     return nominations;
 }
@@ -12171,7 +12162,7 @@ const update_apy = (total_payout,num_eras) => {
 	// multiply up to number of eras in a year
 	let eras_per_day = 4
 	let apy = payout_percent*eras_per_day*365    
-	jQuery("#apy").html(apy.toFixed(2)+"% APY")
+	$("#apy").html(apy.toFixed(2)+"%")
     }
 }
 
@@ -12190,24 +12181,21 @@ const updateNominations = (stats,nominations) => {
     for (let validator in nominations) {
 	let n = nominations[validator]
 	n.percent = (n.total/total)*100
-
 	
-	var el = document.getElementById(validator+'_percent');
-	el.innerHTML=n.percent.toFixed(2)+"%"
-	var el = document.getElementById(validator+'_count');
-	el.innerHTML="eras active: "+n.count
-	var el = document.getElementById(validator+'_splits');
+	$('#'+validator+'_percent').html(n.percent.toFixed(2)+"%")
+	$('#'+validator+'_count').html(n.count)
 	if (n.splits==0) {
-	    el.innerHTML="confidence: high"
+	    $('#'+validator+'_splits').html("high")
 	} else {
 	    if (n.splits==n.count) {
-		el.innerHTML="confidence: low"
+		$('#'+validator+'_splits').html("low")
 	    } else {
-		el.innerHTML="confidence: medium"
+		$('#'+validator+'_splits').html("medium")
 	    }
-	}
-	
+	}	
     }
+
+    sort.sortTable("nominations",2)
 }
 
 const displayStaking = async (div,stash_address,nominations) => {
@@ -12275,29 +12263,29 @@ const displayStaking = async (div,stash_address,nominations) => {
 }
 
 const stashAddr = async () => {
-    let stash_address = jQuery("#stash_address").val()
-    jQuery("#nominations").empty();
-    jQuery("#start").prop('disabled', true);
-    jQuery("#status").html("status: searching for controller")
+    let stash_address = $("#stash_address").val()
+    //$("#nominations tbody").empty();
+    $("#start").prop('disabled', true);
+    $("#status").html("status: searching for controller")
 
     let account = await api.getSearch(stash_address)
     balance = parseFloat(account.data.account.bonded)
     
     let a = addr.ss58Decode(stash_address)	
     if (!a) {
-	jQuery("#status").html("status: address error")
+	$("#status").html("status: address error")
     } else {
-	jQuery("#stash_icon").empty();
-	jQuery("#stash_icon").append(id.identicon(a, false, 50))
+	$("#stash_icon").empty();
+	$("#stash_icon").append(id.identicon(a, false, 50))
 	let controller_addresses = await getControllers(stash_address)
 
 	if (controller_addresses.length==0) {
-	    jQuery("#status").html("status: couldn't find controller")
+	    $("#status").html("status: couldn't find controller")
 	    return
 	}
 
-	jQuery("#nominations").empty();
-	jQuery("#status").html("status: loading nominations")
+	//$("#nominations tbody").empty();
+	$("#status").html("status: loading nominations")
 	var el = document.getElementById('nominations');
 	let n = []
 	for (let c of controller_addresses) {
@@ -12305,23 +12293,22 @@ const stashAddr = async () => {
 	}
 	
 	if (n.length==0) {
-	    jQuery("#status").html("status: no nominations found")
+	    $("#status").html("status: no nominations found")
 	    return
 	}
 	
 	nominations = await renderNominations(el, n, true);	
-	jQuery("#status").html("status: loading rewards")
+	$("#status").html("status: loading rewards")
 	var el = document.getElementById('reward-slash');
 	await displayStaking(el,stash_address,nominations)
-	jQuery("#status").html("status: finished")
+	$("#status").html("status: finished")
     }
 }
     
 // connect up the things
-jQuery("#stash_address").change(stashAddr);
+$("#stash_address").change(stashAddr);
 
-
-},{"./address.js":9,"./api.js":10,"./identicon.js":11,"./search.js":13,"./utils.js":14,"jquery":7}],13:[function(require,module,exports){
+},{"./address.js":9,"./api.js":10,"./identicon.js":11,"./search.js":13,"./sort.js":14,"./utils.js":15,"jquery":7}],13:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12415,7 +12402,58 @@ const searchAddress = async (depth, address, search_params) => {
 
 exports.searchAddress = searchAddress;
 
-},{"./address.js":9,"./api.js":10,"./utils.js":14,"jquery":7}],14:[function(require,module,exports){
+},{"./address.js":9,"./api.js":10,"./utils.js":15,"jquery":7}],14:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.sortTable = sortTable;
+
+function sortTable(id, col) {
+  var table, rows, switching, i, x, y, shouldSwitch;
+  table = document.getElementById(id);
+  switching = true;
+  /* Make a loop that will continue until
+     no switching has been done: */
+
+  while (switching) {
+    // Start by saying: no switching is done:
+    switching = false;
+    rows = table.rows;
+    /* Loop through all table rows (except the
+       first, which contains table headers): */
+
+    for (i = 1; i < rows.length - 1; i++) {
+      // Start by saying there should be no switching:
+      shouldSwitch = false;
+      /* Get the two elements you want to compare,
+         one from current row and one from the next: */
+
+      x = rows[i].getElementsByTagName("TD")[col];
+      y = rows[i + 1].getElementsByTagName("TD")[col];
+      x = parseFloat(x.innerHTML.slice(0, -1)); // drop the %
+
+      y = parseFloat(y.innerHTML.slice(0, -1)); // drop the %
+      // Check if the two rows should switch place:
+
+      if (x < y) {
+        // If so, mark as a switch and break the loop:
+        shouldSwitch = true;
+        break;
+      }
+    }
+
+    if (shouldSwitch) {
+      /* If a switch has been marked, make the switch
+         and mark that a switch has been done: */
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+    }
+  }
+}
+
+},{}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12441,7 +12479,7 @@ const sleep = ms => {
 
 exports.sleep = sleep;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -12593,7 +12631,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -14374,7 +14412,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":15,"buffer":16,"ieee754":17}],17:[function(require,module,exports){
+},{"base64-js":16,"buffer":17,"ieee754":18}],18:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m

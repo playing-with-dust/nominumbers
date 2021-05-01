@@ -4,15 +4,28 @@ body {
 
 .long_name {
 	font-family: monospace, monospace;
-	font-size: 50%;
+	font-size: 100%;
 }
 
-.short_name {
-	font-size: 150%;
+@media only screen and (max-width: 992px) {
+    .long_name {
+	font-size: 50%;
+    }
 }
 
 .nomination_percent {
 	font-size: 200%;
+}
+
+#stash_icon {
+    width:70px;
+    height:50px;
+    background: white;
+    padding-left: 0.6em;
+}
+
+#stash {
+    margin-bottom: 0.5em;
 }
 
 .total {
@@ -20,6 +33,10 @@ body {
 }
 
 .nomination_count {
+}
+
+.out {
+
 }
 
 .nom {
