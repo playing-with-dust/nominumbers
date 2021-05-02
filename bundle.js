@@ -12264,19 +12264,21 @@ const displayStaking = async (div,stash_address,nominations) => {
 
 const stashAddr = async () => {
     let stash_address = $("#stash_address").val()
-    //$("#nominations tbody").empty();
+    $("#nominations tbody").empty();
     $("#start").prop('disabled', true);
     $("#status").html("status: searching for controller")
 
-    let account = await api.getSearch(stash_address)
-    balance = parseFloat(account.data.account.bonded)
-    
-    let a = addr.ss58Decode(stash_address)	
+    let a = addr.ss58Decode(stash_address)
+
     if (!a) {
 	$("#status").html("status: address error")
     } else {
 	$("#stash_icon").empty();
 	$("#stash_icon").append(id.identicon(a, false, 50))
+
+	let account = await api.getSearch(stash_address)
+	balance = parseFloat(account.data.account.bonded)    
+	
 	let controller_addresses = await getControllers(stash_address)
 
 	if (controller_addresses.length==0) {
@@ -12284,7 +12286,7 @@ const stashAddr = async () => {
 	    return
 	}
 
-	//$("#nominations tbody").empty();
+	$("#nominations tbody").empty();
 	$("#status").html("status: loading nominations")
 	var el = document.getElementById('nominations');
 	let n = []
