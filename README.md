@@ -25,15 +25,22 @@ that era. In this case we divide the payout equally and lower a
 nominations that are not activated much, so perhaps this doesn't
 matter.
 
-## [Try it here](https://playing-with-dust.github.io/nominumbers/)
+## [Try it online here](https://playing-with-dust.github.io/nominumbers/)
+
+## Run nominumbers locally
+
+1. [Download the zip](https://github.com/playing-with-dust/nominumbers/archive/refs/heads/production.zip).
+2. Extract to your device.
+3. Point your browser at `nominumbers-production/index.html`.
 
 ## Notes:
 
 * APY is an estimate - e.g. if your bonded value has changed in the
   last 28 eras it will be incorrect.
-* Currently it loads all nominations found - this is partly a debug
-  measure to make sure we get them all, the fix will be to reduce this
-  to the last nomination call. 
+* Currently nominumbers loads all nominations found - this is partly a
+  debug	measure to make sure we capture all rewards. The fix will be to
+  reduce this to the last nomination call and any others in the past
+  week (see [#7](https://github.com/playing-with-dust/nominumbers/issues/7)). 
  
 ## Building
 
