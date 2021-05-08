@@ -47,7 +47,7 @@ matter.
     $ npm install
     $ browserify -p esmify src/index.js -o bundle.js
 
-* Complaints -> hegimonic_philosophy@protonmail.com
+* Complaints -> playing_with_dust@protonmail.com
 * Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
 * Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
