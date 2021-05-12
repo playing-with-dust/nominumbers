@@ -25,7 +25,17 @@ that era. In this case we divide the payout equally and lower a
 nominations that are not activated much, so perhaps this doesn't
 matter.
 
-## [Try it online here](https://playing-with-dust.github.io/nominumbers/)
+## Try it
+
+* [IPFS](https://gateway.ipfs.io/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
+* [Cloudflare IPFS](https://cloudflare-ipfs.com/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
+* [Github hosted](https://playing-with-dust.github.io/nominumbers/)
+
+IPFS version hashes:
+
+* v0.3: QmX2tBZHTZwGF1tuaLEhcLSSDgAHnkHsarTszgxMUsUyLP
+
+Name: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
 
 ## Run nominumbers locally
 
@@ -51,4 +61,4 @@ matter.
 * Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
 * Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
-
+This project is kindly supported by the [Kusama Treasury](https://kusama.subscan.io/treasury_tip/0xf22af71734034b6fea46fcde7df56ead363beed687eb55e26a84691171d755aa)
