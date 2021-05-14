@@ -27,15 +27,11 @@ matter.
 
 ## Try it
 
+* [Github hosted](https://playing-with-dust.github.io/nominumbers/)
 * [IPFS](https://gateway.ipfs.io/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
 * [Cloudflare IPFS](https://cloudflare-ipfs.com/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
-* [Github hosted](https://playing-with-dust.github.io/nominumbers/)
 
-IPFS version hashes:
-
-* v0.3: QmX2tBZHTZwGF1tuaLEhcLSSDgAHnkHsarTszgxMUsUyLP
-
-Name: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
+IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
 
 ## Run nominumbers locally
 
