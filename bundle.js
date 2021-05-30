@@ -12135,7 +12135,9 @@ const renderNominations = async (div,n,showAccountName) => {
 
 	$("#nominations")
 	    .append($('<tr>')
-		    .append($('<td>').attr('id',validator+'_icon'))
+		    .append($('<td>')
+			    .attr('id',validator+'_icon')
+			    .attr('class','icon'))
 		    .append($('<td>').attr('id',validator+'_id'))
 		    .append($('<td>').attr('id',validator+'_percent')
 			    .html("..."))
@@ -12391,10 +12393,13 @@ const searchExtrinsic = async (depth, x, search_params) => {
   if (depth > max_depth) return [];
   let args = x.call_args;
   if (!args) args = x.params;
-  args = JSON.parse(args);
 
-  if (args) {
-    return await searchParams(depth, x.block_timestamp, x.call_module, x.call_module_function, args, search_params);
+  if (args != "") {
+    args = JSON.parse(args);
+
+    if (args) {
+      return await searchParams(depth, x.block_timestamp, x.call_module, x.call_module_function, args, search_params);
+    }
   }
 
   return [];

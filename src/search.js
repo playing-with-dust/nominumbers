@@ -57,14 +57,16 @@ const searchExtrinsic = async (depth,x,search_params) => {
 
     let args = x.call_args    
     if (!args) args = x.params
-    args = JSON.parse(args)
-    if (args) {
-	return await searchParams(depth,
-				  x.block_timestamp,
-				  x.call_module,
-				  x.call_module_function,
-				  args,
-				  search_params)
+    if (args!="") {
+	args = JSON.parse(args)
+	if (args) {
+	    return await searchParams(depth,
+				      x.block_timestamp,
+				      x.call_module,
+				      x.call_module_function,
+				      args,
+				      search_params)
+	}
     }
     return []
 }

@@ -33,6 +33,11 @@ body {
     color: white;
 }
 
+.icon {
+    background: red;
+    cursor: copy;
+}
+
 .total {
 	font-size: 100%;
 }

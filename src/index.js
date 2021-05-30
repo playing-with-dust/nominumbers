@@ -105,7 +105,9 @@ const renderNominations = async (div,n,showAccountName) => {
 
 	$("#nominations")
 	    .append($('<tr>')
-		    .append($('<td>').attr('id',validator+'_icon'))
+		    .append($('<td>')
+			    .attr('id',validator+'_icon')
+			    .attr('class','icon'))
 		    .append($('<td>').attr('id',validator+'_id'))
 		    .append($('<td>').attr('id',validator+'_percent')
 			    .html("..."))
