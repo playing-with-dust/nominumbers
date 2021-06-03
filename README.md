@@ -47,7 +47,16 @@ IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
   debug	measure to make sure we capture all rewards. The fix will be to
   reduce this to the last nomination call and any others in the past
   week (see [#7](https://github.com/playing-with-dust/nominumbers/issues/7)). 
- 
+
+## Release info
+
+### V0.4
+
+* Added reward info including possible eras (towards income tax calculations)
+* Added "click on icon = address to copy buffer" feature
+* Fixed extrinsic parsing when params is an empty string
+* Fixed percentage in batch calls (was % of all validators in payout, not nominations)
+
 ## Building
 
     $ npm install
