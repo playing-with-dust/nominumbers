@@ -18,7 +18,7 @@ const callApi = async (url,body,fn) => {
 	const location = window.location.hostname;
 	const settings = {
             method: 'POST',
-	    mode: 'cors',
+	    mode: 'cors', 
             headers: {
 		Accept: 'application/json',
 		'Content-Type': 'application/json',
@@ -121,6 +121,17 @@ const getExtrinsic = async (hash) => {
 	(data) => { return data; });
 }
 
+const getPrice = async (timestamp) => {
+    return callApi(
+	"open/price", {
+	    "time": timestamp
+	},
+	(data) => {
+	    console.log(data)
+	    return parseFloat(data.data.price);
+	});
+}
+
 export {
     getStaking,
     getTransfers, 
@@ -128,5 +139,6 @@ export {
     getEvent, 
     getSearch, 
     getExtrinsic,
-    getExtrinsics
+    getExtrinsics,
+    getPrice
 }

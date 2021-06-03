@@ -8,6 +8,21 @@ const sort = require('./sort.js')
 
 var balance = 0
 
+const zeroPad = (num, places) => String(num).padStart(places, '0')
+
+const timeStampToString = (unix_timestamp) => {
+    var a = new Date(unix_timestamp * 1000);    
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var year = a.getFullYear();
+    var month = months[a.getMonth()];
+    var date = a.getDate();
+    var hour = zeroPad(a.getHours(),2);
+    var min = zeroPad(a.getMinutes(),2);
+    var sec = zeroPad(a.getSeconds(),2);
+    return [date + ' ' + month + ' ' + year,
+	    hour + ':' + min + ':' + sec]
+}
+
 const getControllers = async (stash_address) => {
     let results = await search.searchAddress(
 	0,stash_address,
@@ -95,50 +110,55 @@ const displayAccount = async (icondiv,namediv,address,showName) => {
 const renderNominations = async (div,n,showAccountName) => {
     let nominations = {}
     for (let validator of n) {
-	
-	nominations[validator]={
-	    total: 0,
-	    count: 0,
-	    percent: 0,
-	    splits: 0,
-	}
+	if (!nominations[validator]) {
+	    nominations[validator]={
+		total: 0,
+		count: 0,
+		percent: 0,
+		splits: 0,
+	    }
 
-	$("#nominations")
-	    .append($('<tr>')
-		    .append($('<td>')
-			    .attr('id',validator+'_icon')
-			    .attr('class','icon'))
-		    .append($('<td>').attr('id',validator+'_id'))
-		    .append($('<td>').attr('id',validator+'_percent')
-			    .html("..."))
-		    .append($('<td>').attr('id',validator+'_count')
-			    .html("0"))
-		    .append($('<td>').attr('id',validator+'_splits')
-			    .html("high"))
-		   );
-	
-	await displayAccount(
-	    $('#'+validator+'_icon'),
-	    $('#'+validator+'_id'),
-	    validator,showAccountName)
+	    $("#nominations")
+		.append($('<tr>')
+			.append($('<td>')
+				.attr('id',validator+'_icon')
+				.attr('class','icon'))
+			.append($('<td>').attr('id',validator+'_id'))
+			.append($('<td>').attr('id',validator+'_percent')
+				.html("..."))
+			.append($('<td>').attr('id',validator+'_count')
+				.html("0"))
+			.append($('<td>').attr('id',validator+'_splits')
+				.html("high"))
+		       );
+	    
+	    await displayAccount(
+		$('#'+validator+'_icon'),
+		$('#'+validator+'_id'),
+		validator,showAccountName)
+	}
     }
     return nominations;
 }
 
 const findValidatorInParams = (params) => {
     let validator_stash
+    let era
     for (const p of params) {		
 	if (p.name=="validator_stash") {
 	    validator_stash=utils.fromHexString(p.value)
 	}
+	if (p.name=="era") {
+	    era=p.value
+	}
     }
     if (validator_stash) {
-	return addr.ss58Encode(validator_stash)
+	return [addr.ss58Encode(validator_stash),era]
     }
     return null;
 }
 
-const update_apy = (total_payout,num_eras) => {
+const updateAPY = (total_payout,num_eras) => {
     if (balance && balance>0) {
 	// balance is (bonded) amount we have *now*
 	// get the percentage of this that we know comes from payouts
@@ -162,7 +182,7 @@ const updateNominations = (stats,nominations) => {
     var el = document.getElementById('total');
     el.innerHTML=stats.weekly_total/1e12+" KSM"
 
-    update_apy(stats.weekly_total,stats.num_eras)
+    updateAPY(stats.weekly_total,stats.num_eras)
 
     for (let validator in nominations) {
 	let n = nominations[validator]
@@ -184,67 +204,92 @@ const updateNominations = (stats,nominations) => {
     sort.sortTable("nominations",2)
 }
 
+const addToDetails = async (timestamp,amount,probable_validators) => {
+    let t = timeStampToString(timestamp)
+    let p = amount/1e12
+
+    $("#details")
+	.append($('<tr>')
+		.append($('<td>').html(t[0]))
+		.append($('<td>').html(t[1]))
+		.append($('<td>').html(p+" KSM"))
+		.append($('<td>').html("..."))
+		//.append($('<td>').html(p*await api.getPrice(timestamp)))
+		.append($('<td>').html(probable_validators.reduce((str,v) => {
+		    return str+"<span class='addr'>"+v.addr+"</span><br>eras: "+v.eras.join(", ")+"<br>"
+		},""))))
+}
+
 const displayStaking = async (div,stash_address,nominations) => {
     var x = await api.getStaking(stash_address);
     const stats = { weekly_total: 0, num_eras: 0 };
     for (const r of x) {
 	// get the transaction detail of this reward
 	let y = await api.getExtrinsic(r.extrinsic_hash);
-
+	
 	stats.weekly_total += parseInt(r.amount)
 	stats.num_eras += 1
+	probable_validators = []
 	
 	// payout extrinsics contain nominator addresses in their params
 	// (validator_stash), we need to deal with batched payouts too
 	if (y.data.call_module_function=="batch") {
 	    // we need to filter the validators to find the ones we
 	    // have actually nominated previously
-	    let unique = []
+	    let unique = {}
 	    // a list of mutltiple calls
 	    for (let calls of y.data.params) {
 		for (let call of calls.value) {
 		    let args = call.call_args
 		    if (!args) args = call.params
-		    let validator=findValidatorInParams(args)
+		    let [addr,era]=findValidatorInParams(args)
 		    // validators can appear more than once
-		    if (!unique.includes(validator)) {
-			unique.push(validator)
+		    if (!unique[addr]) {
+			unique[addr]=[era]
+		    } else {
+			// add different era to same validator
+			unique[addr].push(era)
 		    }
 		}
 	    }
 
 	    // count the number of nominations we have
 	    let count=0
-	    for (let validator of unique) {
-		if (nominations[validator]) {
+	    for (let addr in unique) {
+		if (nominations[addr]) {
 		    count+=1;
 		}
 	    }
 	    
-	    for (let validator of unique) {
-		if (nominations[validator]) {
-		    let n = nominations[validator]
+	    for (let addr in unique) {
+		if (nominations[addr]) {
+		    let n = nominations[addr]
 		    // biggest mystery is whether we can get which validator is our one
 		    // if we have nomiated multiple in this set, then split the amount
 		    // between them equally (for the moment)
-		    n.total+=parseInt(r.amount)/unique.length
+		    n.total+=parseInt(r.amount)/count
 		    if (count>1) {
 			n.splits+=1
 		    }
 		    n.count+=1
-		    updateNominations(stats,nominations)							
+		    updateNominations(stats,nominations)
+		    probable_validators.push({addr:addr, eras: unique[addr]})
 		}
 	    }
 	} else {
 	    // or a single validator stash - easy!
-	    let validator=findValidatorInParams(y.data.params)
-	    let n = nominations[validator]
+	    let [addr,era]=findValidatorInParams(y.data.params)
+	    let n = nominations[addr]
 	    if (n) {
 		n.total+=parseInt(r.amount)					
 		n.count+=1
 		updateNominations(stats,nominations)
+		probable_validators.push({addr:addr, eras: [era]})
 	    }
 	}
+
+	await addToDetails(y.data.block_timestamp,r.amount,probable_validators)
+
     }
 }
 
@@ -292,6 +337,19 @@ const stashAddr = async () => {
 	$("#status").html("status: finished")
     }
 }
-    
+
+function openTable(tableName) {
+  var i;
+  var x = document.getElementsByClassName("tab");
+  for (i = 0; i < x.length; i++) {
+    x[i].style.display = "none";
+  }
+  document.getElementById(tableName).style.display = "table";
+}
+
+
+
 // connect up the things
 $("#stash_address").change(stashAddr);
+$("#nominations-button").click(()=>{openTable('nominations')})
+$("#details-button").click(()=>{openTable('details')})

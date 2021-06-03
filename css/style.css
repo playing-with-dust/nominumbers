@@ -17,6 +17,26 @@ body {
 	font-size: 200%;
 }
 
+.addr { font-size: 50%; }
+
+.tab { width: 100%; }
+
+.tab-bar {
+    margin-top: 2px;
+    background: black;
+}
+
+.tab-button {
+    border: none;
+    background: #444;
+    color: #eee;
+}
+
+.tab-button:hover {
+    background: #eee;
+    color: #444;
+}
+
 #stash_icon {
     width:70px;
     height:50px;
@@ -30,7 +50,8 @@ body {
 
 #status {
     background: black;
-    color: white;
+    color: #eee;
+    text-align: center;
 }
 
 .icon {
@@ -40,13 +61,6 @@ body {
 
 .total {
 	font-size: 100%;
-}
-
-.nomination_count {
-}
-
-.out {
-
 }
 
 .nom {

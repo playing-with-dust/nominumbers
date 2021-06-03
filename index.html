@@ -12,7 +12,7 @@
 <body>
   <div id="container" class="container" style="width: 100%;">
 	<div class="row">
-	  <h3>🤖 nominumbers (beta): your weekly kusama staking analysis v0.3</h3>
+	  <h3>🤖 nominumbers (beta): your weekly kusama staking analysis v0.4</h3>
 	</div>
 	<div id="top" class="row">
 	  <div id="stash" class="col-xs-12 col-sm-12 col-md-8">
@@ -42,8 +42,13 @@
 	    <div id="status">status: ready</div>
 	  </div>
 	</div>
+
+	<div class="tab-bar">
+	  <button id="nominations-button" class="tab-button">nominations</button>
+	  <button id="details-button" class="tab-button">reward info</button>
+	</div>
 	
-	<table id="nominations" class="col-12 table table-striped">
+	<table id="nominations" class="col-12 tab table table-striped">
 	  <thead>
 	    <tr>
 	      <th scope="col">Icon</th>
@@ -51,6 +56,20 @@
 	      <th scope="col">Percentage</th>
 	      <th scope="col">Eras active</th>
 	      <th scope="col">Confidence</th>
+	    </tr>
+	  </thead>
+	  <tbody>
+	  </tbody>
+	</table>
+
+	<table id="details" class="col-12 tab table table-striped" style="display:none">
+	  <thead>
+	    <tr>
+	      <th scope="col">Date</th>
+	      <th scope="col">Time</th>
+	      <th scope="col">Amount</th>
+	      <th scope="col">Dollars (TBD)</th>
+	      <th scope="col">Possible validators & Eras</th>
 	    </tr>
 	  </thead>
 	  <tbody>
