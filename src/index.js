@@ -296,6 +296,7 @@ const displayStaking = async (div,stash_address,nominations) => {
 const stashAddr = async () => {
     let stash_address = $("#stash_address").val()
     $("#nominations tbody").empty();
+    $("#details tbody").empty();
     $("#start").prop('disabled', true);
     $("#status").html("status: searching for controller")
 
