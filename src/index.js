@@ -155,7 +155,7 @@ const findValidatorInParams = (params) => {
     if (validator_stash) {
 	return [addr.ss58Encode(validator_stash),era]
     }
-    return null;
+    return [undefined,undefined];
 }
 
 const updateAPY = (total_payout,num_eras) => {
