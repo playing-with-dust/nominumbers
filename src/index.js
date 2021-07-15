@@ -233,7 +233,8 @@ const displayStaking = async (div,stash_address,nominations) => {
 	
 	// payout extrinsics contain nominator addresses in their params
 	// (validator_stash), we need to deal with batched payouts too
-	if (y.data.call_module_function=="batch") {
+	if (y.data.call_module_function=="batch" ||
+	    y.data.call_module_function=="batch_all") {
 	    // we need to filter the validators to find the ones we
 	    // have actually nominated previously
 	    let unique = {}
