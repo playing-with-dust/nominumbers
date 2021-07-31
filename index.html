@@ -1,94 +1,162 @@
 <!doctype html>
 
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name='viewport' content='width=device-width'>
-  <title>nominumbers</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
-  <link href="css/style.css" rel="stylesheet" type="text/css">
-</head>
+  <head>
+    <meta charset="utf-8">
+    <meta name='viewport' content='width=device-width'>
+    <title>nominumbers</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css">
+    <link href="css/loading.css" rel="stylesheet" type="text/css">
+  </head>
+  
+  <body>
 
-<body>
-  <div id="container" class="container" style="width: 100%;">
-	<div class="row">
-	  <h3>🤖 nominumbers (beta): your weekly kusama staking analysis v0.4</h3>
+    <article>
+      <header>
+	<h1>🤖 nominumbers: Polkadot/Kusama staking analysis</h1>
+      </header>
+
+      <section class="options">
+	<select id="network">	  
+	  <option value="dot">Polkadot</option>
+	  <option value="ksm">Kusama</option>
+	  <option value="wnd">Westend</option>
+	</select>
+	  &nbsp;
+	<select id="currency">	  
+	  <option value="usd">USD</option>
+	  <option value="eur">EUR</option>
+	  <option value="cny">CNY</option>
+	  <option value="gbp">GBP</option>
+	</select>
+	<div class="option-spacer"></div>
+	<div class="dropdown">
+	  <span>Start date*</span>
+	  <div class="dropdown-content">
+	    Due to subscan public API rate limits, collecting many eras over long periods of time will take a while to complete.
+	  </div>
 	</div>
-	<div id="top" class="row">
-	  <div id="stash" class="col-xs-12 col-sm-12 col-md-8">
-	    <div class="row">
-	      <div class="col-2">
-		<div id="stash_icon"></div>
-	      </div>
-	      <div class="col-10">
-		<input id="stash_address" placeholder="public stash address" type="text" style="height:50px; border: none; width:100%"></input>
+	<input id="start-date" type="date"></input>
+	<span id="num-eras">= 0 eras</span>
+      </section>
+      
+      <section class="address">
+	<div id="stash_icon"></div>
+	<input id="stash_address" placeholder="Stash Address" type="text"></input>
+	<button id="start">Start</button>
+	
+	<div id="working" style="display:none;" class="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>	
+      </section>
+
+      <section id="error" class="error"></section>
+      
+      <section class="outputs">
+	<div class="output-row">
+	  <div><b>APY</b>
+	    <div class="dropdown">
+	      <span>*</span>
+	      <div class="dropdown-content">
+		This is estimated based on your currently bonded amount, and the rewards found - if your bond has changed during this time period, it will be incorrect.
 	      </div>
 	    </div>
+	    
 	  </div>
-	  <div class="col-xs-12 col-sm-12 col-md-4 out">
-	    <table class="table">
-	      <tbody>
+	  <div id="apy">0.00%</div>
+	</div>
+	<div class="output-row">
+	  <div><b>Total reward</b></div>
+	  <div id="total">0.0</div>
+	</div>
+	<div class="output-row">
+	  <div><b>Total currency</b></div>
+	  <div id="total-currency">0.00</div>
+	</div>
+      </section>
+      
+	<div class="tab-bar">
+	  <button id="nominations-button" class="tab-button">Nominations</button>
+	  <button id="details-button" class="tab-button">Reward info</button>
+<!--	  <button id="missing-button" class="tab-button">Missing eras</button> -->
+	</div>
+
+
+      <section class="holder">
+
+	<section id="nominations-tab" class="nominations tab">
+	  <div class="nominations-data">
+	    <table id="nominations">
+	      <thead>
 		<tr>
-		  <td><b>APY</b></td><td id="apy">0.00%</td>
-		</tr><tr>
-		  <td><b>Total reward</b></td><td id="total">0.00000000 KSM</td>
+		  <th scope="col">Icon</th>
+		  <th scope="col">Validator</th>
+		  <th scope="col">Percentage</th>
+		  <th scope="col">Eras active</th>
+		  <th scope="col">Confidence</th>
 		</tr>
+	      </thead>
+	      <tbody>
 	      </tbody>
 	    </table>
 	  </div>
-	</div>
-	<div class="row">
-	  <div class="col-xs-12">
-	    <div id="status">status: ready</div>
+	</section> <!-- nominations -->
+
+	<section id="rewards-tab" class="rewards tab" style="display:none;">
+	  <div class="nominations-data">
+	    <table id="details">
+	      <thead>
+		<tr>
+		  <th scope="col">Date</th>
+		  <th scope="col">Time</th>
+		  <th scope="col">Tokens</th>
+		  <th scope="col">Currency</th>
+		  <th scope="col">Price</th>
+		  <th scope="col">Validators</th>
+		</tr>
+	      </thead>
+	      <tbody>
+	      </tbody>
+	    </table>
 	  </div>
-	</div>
+	</section> <!-- rewards -->
 
-	<div class="tab-bar">
-	  <button id="nominations-button" class="tab-button">nominations</button>
-	  <button id="details-button" class="tab-button">reward info</button>
-	</div>
-	
-	<table id="nominations" class="col-12 tab table table-striped">
-	  <thead>
-	    <tr>
-	      <th scope="col">Icon</th>
-	      <th scope="col">Validator</th>
-	      <th scope="col">Percentage</th>
-	      <th scope="col">Eras active</th>
-	      <th scope="col">Confidence</th>
-	    </tr>
-	  </thead>
-	  <tbody>
-	  </tbody>
-	</table>
+<!--	<section id="missing-tab" class="missing tab">
+	  Eras not found in rewards: <br>
+	  <span id="missing-eras"></span<
+	</section> --> <!-- missing eras --> 
 
-	<table id="details" class="col-12 tab table table-striped" style="display:none">
-	  <thead>
-	    <tr>
-	      <th scope="col">Date</th>
-	      <th scope="col">Time</th>
-	      <th scope="col">Amount</th>
-	      <th scope="col">Dollars (TBD)</th>
-	      <th scope="col">Possible validators & Eras</th>
-	    </tr>
-	  </thead>
-	  <tbody>
-	  </tbody>
-	</table>
-	<hr>
+      </section>  <!-- holder -->
+
+      <hr>
+
+      <section class="blurb">
 	<p>
 	  This open source app
 	  reads <a href="https://kusama.subscan.io/">subscan</a> and
-	  tries to collect your total rewards from the last week (28
-	  eras) for each validator you currenty nominate, and display
-	  it as a percentage. The idea is to provide a bit of info on
-	  how your nomination mix is working.
-	  Nominumbers runs in your browser, no data is collected - you can also <a href="https://github.com/playing-with-dust/nominumbers/archive/refs/heads/production.zip">download the zip</a> and use it locally on your device (see the <a href="https://github.com/playing-with-dust/nominumbers#readme">README</a> for more info). <a href="https://github.com/playing-with-dust/nominumbers">GPL3 source code here</a>.
-	</p><p>
-	  This project is kindly supported by the <a href="https://kusama.subscan.io/treasury_tip/0xf22af71734034b6fea46fcde7df56ead363beed687eb55e26a84691171d755aa">Kusama Treasury</a>
+	  displays as best it can which validators your rewards have
+	  come from, along with individual reward records which you
+	  can download. The idea is to provide a bit of detail on how
+	  your nomination mix is working. Nominumbers runs entirely in
+	  your browser - you can also
+	  <a href="https://github.com/playing-with-dust/nominumbers/archive/refs/heads/production.zip">download the zip</a>
+	  and use it locally on your device (see the
+	  <a href="https://github.com/playing-with-dust/nominumbers#readme">README</a>
+	  for more info).
+	  <a href="https://github.com/playing-with-dust/nominumbers">GPL3 source code here</a>.
 	</p>
-   </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
-  <script src="bundle.js"></script>
-</body>
+	<p>
+	  Tips welcome!<br>
+	  <span style="font-size: 75%; overflow:hidden;">
+	    KSM: FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM<br>
+	    DOT: 13GUzG6QSjaBvzjaxMhoqE6EH6wmshSDZGPHYgzEifpcaNMH<br>
+          </span>
+	</p>
+	<p>
+	  This project has been kindly supported by the <a href="https://kusama.subscan.io/treasury_tip/0xf22af71734034b6fea46fcde7df56ead363beed687eb55e26a84691171d755aa">Kusama Treasury</a>. You are running version 1.0rc1
+	</p>
+      </section>
+
+    </article>
+    <script src="bundle.js"></script>
+
+  </body>
 </html>

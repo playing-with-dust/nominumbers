@@ -7,8 +7,15 @@ const jQuery = require("jquery")
 
 var max_calls = 25 // don't ddos subscan
 
+var network_api = "kusama"
+
+const setNetwork = (network) => {
+    network_api = "kusama"
+    if (network=="dot") network_api="polkadot"
+    if (network=="wnd") network_api="westend"
+}
+
 const callApi = async (url,body,fn) => {
-    console.log("calling: "+url)
     // we have to throttle the bandwidth
     await sleep(300);
     let data
@@ -26,7 +33,7 @@ const callApi = async (url,body,fn) => {
 	    body: JSON.stringify(body)
 	}
 	try {
-            const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/`+url, settings);
+            const fetchResponse = await fetch(`https://`+network_api+`.api.subscan.io/api/`+url, settings);
             data = await fetchResponse.json();
 	    result = true
 	} catch (e) {
@@ -43,30 +50,38 @@ const callApi = async (url,body,fn) => {
     return null
 }
 
-const getStaking = async (address) => {
-    return callApi(
-	"scan/account/reward_slash",
-	{
-	    "row": 28,
-	    "page": 0,
-	    "address": address
-	},
-	(data) => {
-	    const rewards = [];
-	    console.log("rewards:");
-	    console.log(data);
+const getStaking = async (address,eras) => {
+    let max_rows = 100
+    let page = 0
+    let npages = Math.floor(eras/max_rows)
+    let rewards = []   
 
-	    for(var i=0; i<data.data.list.length; i++) {
-		//let params = JSON.parse(data.data.list[i].params);
-		rewards.push({
-		    "event_index": data.data.list[i].event_index,
-		    "event_idx": data.data.list[i].event_idx,
-		    "amount": data.data.list[i].amount,
-		    "extrinsic_hash": data.data.list[i].extrinsic_hash,
-		});				
-	    }		
-	    return rewards;
-	});
+    while (page<=npages) {	
+	await callApi(
+	    "scan/account/reward_slash",
+	    {
+		"row": max_rows,
+		"page": page,
+		"address": address
+	    },
+	    (data) => {
+		if (data.data.list!=null) {	    
+		    for(let i=0; i<data.data.list.length; i++) {
+			if (rewards.length<eras) {
+			    rewards.push({
+				"event_index": data.data.list[i].event_index,
+				"event_idx": data.data.list[i].event_idx,
+				"amount": data.data.list[i].amount,
+				"extrinsic_hash": data.data.list[i].extrinsic_hash,
+			    });
+			}
+		    }
+		}
+	    });
+
+	page+=1
+    }
+    return rewards;
 }
 
 const getTransfers = async (address) => {
@@ -127,12 +142,12 @@ const getPrice = async (timestamp) => {
 	    "time": timestamp
 	},
 	(data) => {
-	    console.log(data)
 	    return parseFloat(data.data.price);
 	});
 }
 
 export {
+    setNetwork,
     getStaking,
     getTransfers, 
     getBonded,

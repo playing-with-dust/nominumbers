@@ -1,71 +1,150 @@
 body {
-	background: #eee;
+    box-sizing: border-box;
+    width: 100%;
+    background: #eee;
+    font-family: Lato,'Helvetica Neue',Arial,Helvetica,sans-serif;
+    font-size: 1em;
+    padding: 1em;
+    margin: 0;
+}
+
+@media (min-width: 1000px) {
+    body {
+	font-size: 1.2em;
+	padding-left: 10em;
+	padding-right: 10em;
+    }
+}
+
+.address {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1em;
+}
+
+@media only screen and (min-width: 500px) {
+    .address {
+	flex-direction: row;
+    }
 }
 
 .long_name {
-	font-family: monospace, monospace;
-	font-size: 100%;
+    font-family: monospace, monospace;
+    font-size: 0.5em;
 }
 
-@media only screen and (max-width: 992px) {
-    .long_name {
-	font-size: 50%;
-    }
+.icon {
+    cursor: copy;
 }
 
 .nomination_percent {
 	font-size: 200%;
 }
 
-.addr { font-size: 50%; }
-
-.tab { width: 100%; }
-
-.tab-bar {
-    margin-top: 2px;
-    background: black;
-}
-
-.tab-button {
+input, option, select {
+    padding: 1em;
+    box-sizing: border-box;
+    color: #e6007a;
+    background: white;
+    font-weight: bold;
+    height: 3em;
+    border-radius: 5px;
+    /*    border: 1px solid black; */
     border: none;
-    background: #444;
-    color: #eee;
 }
 
-.tab-button:hover {
-    background: #eee;
-    color: #444;
+input:hover, select:hover, option:hover {
+    background: #e6007a;
+    color: white;
+}
+
+
+#stash_address {
+    width: 100%;
+    font-weight: normal;
+    font-size: 1em;
+    border: 2px solid white;
+    margin-bottom: 1em;
+}
+
+@media only screen and (min-width: 500px) {
+    #stash_address {
+	margin-bottom: 0;
+    }
+}
+
+#stash_address:hover {
+    border: 2px solid #e6007a;
+    background: white;
+    color: #e6007a;
+}
+
+
+.options span {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    line-height: 2.5em;
+}
+
+.options {
+    margin-bottom: 1em;
+    display: flex;
+    flex-direction: column;
+}
+
+@media only screen and (min-width: 500px) {
+    .options {
+	flex-direction: row;
+    }
+}
+
+.option-spacer {
+    flex: 1;
+}
+
+.date-holder {
+    display: flex;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+@media only screen and (min-width: 800px) {
+    .date-holder {
+	margin-top: 0;
+	margin-left: 1em;
+    }
 }
 
 #stash_icon {
-    width:70px;
-    height:50px;
+    padding-top: 4px;
+    max-height: 3em;
+}
+
+.addr { font-size: 0.5em; }
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: #e6007a;
+    opacity: 1; /* Firefox */
+}
+
+::placeholder:hover { /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: white;
+    opacity: 1; /* Firefox */
+}
+
+
+button {
+    font-weight: bold;
+    font-size: 1em;
+    border-radius: 1em;
     background: white;
-    padding-left: 0.6em;
+    border: none;
+    padding: 0.5em;
 }
 
-#stash {
-    margin-bottom: 0.5em;
-}
-
-#status {
-    background: black;
-    color: #eee;
-    text-align: center;
-}
-
-.icon {
-    background: red;
-    cursor: copy;
-}
-
-.total {
-	font-size: 100%;
-}
-
-.nom {
-	border: 1px solid #eee;
-	background: #fff;
+button:hover {
+    background: #e6007a;
+    color: white;
 }
 
 /* 
@@ -74,9 +153,16 @@ This query will take effect for any screen smaller than 760px
 and also iPads specifically.
 */
 
+table {
+    width: 100%;
+}
+
+th {
+    text-align: left;
+}
 @media 
-only screen and (max-width: 760px),
-(min-device-width: 768px) and (max-device-width: 1024px)  {
+only screen and (max-width: 800px),
+(min-device-width: 800px) and (max-device-width: 1024px)  {
 
     /* Force table to not be like tables anymore */
     table, thead, tbody, th, td, tr { 
@@ -90,14 +176,14 @@ only screen and (max-width: 760px),
 	left: -9999px;
     }
     
-    tr { border: 1px solid #ccc; }
+/*    tr { border: 1px solid #ccc; } */
     
     td { 
 	/* Behave  like a "row" */
 	border: none;
 	border-bottom: 1px solid #eee; 
 	position: relative;
-	padding-left: 50%; 
+/*	padding-left: 50%;  */
     }
     
     td:before { 
@@ -117,4 +203,103 @@ only screen and (max-width: 760px),
   #nominations td:nth-of-type(3):before { content: "Percentage:"; }
   #nominations td:nth-of-type(4):before { content: "Eras active:"; }
   #nominations td:nth-of-type(5):before { content: "Confidence:"; }
+
+  #details td:nth-of-type(1):before { content: "Date:"; }
+  #details td:nth-of-type(2):before { content: "Time:"; }
+  #details td:nth-of-type(3):before { content: "Reward:"; }
+  #details td:nth-of-type(4):before { content: "Currency:"; }
+  #details td:nth-of-type(5):before { content: "Price:"; }
+  #details td:nth-of-type(6):before { content: "Validators:"; }
 }
+
+
+.tab { width: 100%; }
+
+.status-bar {
+    color: #e6007a;
+    /*    background: black; */
+    height: 2em;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 5px;
+}
+
+@media only screen and (min-width: 800px) {
+    .status-bar {
+	margin-top: 1em;
+    }
+}
+
+.outputs {
+    text-align: right;    
+}
+
+.output-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.status {
+    text-align: center;
+    width: 100%;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+    font-size: 0.75em;
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    padding: 0.5em;
+    z-index: 1;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.tab-bar {
+    padding-top: 4px;
+    margin-top: 2px;
+    border-radius: 5px;
+    background: black;
+}
+
+.tab-button {
+    border-radius: 0;
+}
+
+.tab-button:hover {
+    background: #e6007a;
+    color: #fff;
+}
+
+.error {
+    border-radius: 5px;
+    background: #e6007a;
+    text-align: center;
+    padding: 0.5em;
+    color: white;
+    margin-bottom: 1em;
+    display: none;
+}
+
+#details td {
+    font-size: 0.75em;
+}
+
+#details tr:nth-child(even) {
+    background-color: #f7f7f7;
+}
+
+#nominations tr:nth-child(even) {
+    background-color: #f7f7f7;
+}
+
+#csv { color: white; }

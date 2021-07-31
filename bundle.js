@@ -692,7 +692,7 @@ module.exports = {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":17}],6:[function(require,module,exports){
+},{"buffer":20}],6:[function(require,module,exports){
 var basex = require('base-x')
 var ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -11648,14 +11648,14 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":17}],9:[function(require,module,exports){
+},{"buffer":20}],9:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ss58Decode = exports.ss58Encode = void 0;
+exports.setNetwork = exports.ss58Decode = exports.ss58Encode = void 0;
 
 const bs58 = require('bs58');
 
@@ -11663,12 +11663,25 @@ const {
   blake2b
 } = require('blakejs');
 
+const dot_prefix = 0;
+const ksm_prefix = 2;
+const wnd_prefix = 42;
+var network_prefix = ksm_prefix;
+
+const setNetwork = network => {
+  network_prefix = ksm_prefix;
+  if (network == "dot") network_prefix = dot_prefix;
+  if (network == "wnd") network_prefix = wnd_prefix;
+};
+
+exports.setNetwork = setNetwork;
+
 const ss58Encode = address => {
   if (address.length != 32) {
     return null;
   }
 
-  let bytes = new Uint8Array([2, ...address]);
+  let bytes = new Uint8Array([network_prefix, ...address]);
   let pre = Buffer.from([0x53, 0x53, 0x35, 0x38, 0x50, 0x52, 0x45]);
   let hash = blake2b(Buffer.concat([pre, bytes]));
   let complete = new Uint8Array([...bytes, hash[0], hash[1]]);
@@ -11687,7 +11700,7 @@ const ss58Decode = address => {
     return null;
   }
 
-  if (a[0] == 2) {
+  if (a[0] == network_prefix) {
     if (a.length == 32 + 1 + 2) {
       let address = a.slice(0, 33);
       let pre = Buffer.from([0x53, 0x53, 0x35, 0x38, 0x50, 0x52, 0x45]);
@@ -11697,17 +11710,17 @@ const ss58Decode = address => {
         return address.slice(1);
       } else {
         // invalid checksum
-        console.log(1);
+        console.log("invalid address checksum");
         return null;
       }
     } else {
       // Invalid length.
-      console.log(2);
+      console.log("invalid address length");
       return null;
     }
   } else {
     // Invalid version.
-    console.log(3);
+    console.log("invalid address version");
     return null;
   }
 };
@@ -11715,13 +11728,13 @@ const ss58Decode = address => {
 exports.ss58Decode = ss58Decode;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"blakejs":4,"bs58":6,"buffer":17}],10:[function(require,module,exports){
+},{"blakejs":4,"bs58":6,"buffer":20}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getPrice = exports.getExtrinsics = exports.getExtrinsic = exports.getSearch = exports.getEvent = exports.getBonded = exports.getTransfers = exports.getStaking = void 0;
+exports.getPrice = exports.getExtrinsics = exports.getExtrinsic = exports.getSearch = exports.getEvent = exports.getBonded = exports.getTransfers = exports.getStaking = exports.setNetwork = void 0;
 
 const bs58 = require('bs58');
 
@@ -11747,9 +11760,18 @@ const jQuery = require("jquery");
 
 var max_calls = 25; // don't ddos subscan
 
-const callApi = async (url, body, fn) => {
-  console.log("calling: " + url); // we have to throttle the bandwidth
+var network_api = "kusama";
 
+const setNetwork = network => {
+  network_api = "kusama";
+  if (network == "dot") network_api = "polkadot";
+  if (network == "wnd") network_api = "westend";
+};
+
+exports.setNetwork = setNetwork;
+
+const callApi = async (url, body, fn) => {
+  // we have to throttle the bandwidth
   await sleep(300);
   let data;
   let result = false;
@@ -11768,7 +11790,7 @@ const callApi = async (url, body, fn) => {
     };
 
     try {
-      const fetchResponse = await fetch(`https://kusama.api.subscan.io/api/` + url, settings);
+      const fetchResponse = await fetch(`https://` + network_api + `.api.subscan.io/api/` + url, settings);
       data = await fetchResponse.json();
       result = true;
     } catch (e) {
@@ -11788,28 +11810,35 @@ const callApi = async (url, body, fn) => {
   return null;
 };
 
-const getStaking = async address => {
-  return callApi("scan/account/reward_slash", {
-    "row": 28,
-    "page": 0,
-    "address": address
-  }, data => {
-    const rewards = [];
-    console.log("rewards:");
-    console.log(data);
+const getStaking = async (address, eras) => {
+  let max_rows = 100;
+  let page = 0;
+  let npages = Math.floor(eras / max_rows);
+  let rewards = [];
 
-    for (var i = 0; i < data.data.list.length; i++) {
-      //let params = JSON.parse(data.data.list[i].params);
-      rewards.push({
-        "event_index": data.data.list[i].event_index,
-        "event_idx": data.data.list[i].event_idx,
-        "amount": data.data.list[i].amount,
-        "extrinsic_hash": data.data.list[i].extrinsic_hash
-      });
-    }
+  while (page <= npages) {
+    await callApi("scan/account/reward_slash", {
+      "row": max_rows,
+      "page": page,
+      "address": address
+    }, data => {
+      if (data.data.list != null) {
+        for (let i = 0; i < data.data.list.length; i++) {
+          if (rewards.length < eras) {
+            rewards.push({
+              "event_index": data.data.list[i].event_index,
+              "event_idx": data.data.list[i].event_idx,
+              "amount": data.data.list[i].amount,
+              "extrinsic_hash": data.data.list[i].extrinsic_hash
+            });
+          }
+        }
+      }
+    });
+    page += 1;
+  }
 
-    return rewards;
-  });
+  return rewards;
 };
 
 exports.getStaking = getStaking;
@@ -11885,14 +11914,63 @@ const getPrice = async timestamp => {
   return callApi("open/price", {
     "time": timestamp
   }, data => {
-    console.log(data);
     return parseFloat(data.data.price);
   });
 };
 
 exports.getPrice = getPrice;
 
-},{"./address.js":9,"./identicon.js":11,"./utils.js":15,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
+},{"./address.js":9,"./identicon.js":12,"./utils.js":18,"blakejs":4,"bs58":6,"jquery":7}],11:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.initDate = initDate;
+exports.update = update;
+exports.start_date = void 0;
+
+const $ = require("jquery");
+
+function treatAsUTC(date) {
+  var result = new Date(date);
+  result.setMinutes(result.getMinutes() - result.getTimezoneOffset());
+  return result;
+}
+
+function daysBetween(startDate, endDate) {
+  var millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return (treatAsUTC(endDate) - treatAsUTC(startDate)) / millisecondsPerDay;
+}
+
+function erasBetween(startDate, endDate, network) {
+  let mul = 4;
+  if (network == "dot") mul = 1;
+  return Math.round(daysBetween(startDate, endDate) * mul);
+}
+
+var start_date = null;
+exports.start_date = start_date;
+
+function update(updateFn, network) {
+  let eras = erasBetween(start_date, new Date(), network);
+  updateFn(eras);
+  $('#num-eras').html("= " + eras + " eras");
+}
+
+function initDate(updateFn, network) {
+  exports.start_date = start_date = new Date();
+  start_date.setDate(start_date.getDate() - 7);
+  var date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1).toString().padStart(2, '0') + '-' + start_date.getDate();
+  $('#start-date').val(date);
+  update(updateFn, network);
+  $('#start-date').change(() => {
+    exports.start_date = start_date = new Date($('#start-date').val());
+    update(updateFn, network);
+  });
+}
+
+},{"jquery":7}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12038,85 +12116,113 @@ const identicon = (addr, sixPoint, size) => {
 
 exports.identicon = identicon;
 
-},{"./address.js":9,"blakejs":4}],12:[function(require,module,exports){
-const api = require('./api.js')
-const $ = require("jquery")
-const id = require('./identicon.js')
-const addr = require('./address.js')
-const utils = require('./utils.js')
-const search = require('./search.js')
-const sort = require('./sort.js')
+},{"./address.js":9,"blakejs":4}],13:[function(require,module,exports){
+"use strict";
 
-var balance = 0
+const api = require('./api.js');
 
-const zeroPad = (num, places) => String(num).padStart(places, '0')
+const $ = require("jquery");
 
-const timeStampToString = (unix_timestamp) => {
-    var a = new Date(unix_timestamp * 1000);    
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var year = a.getFullYear();
-    var month = months[a.getMonth()];
-    var date = a.getDate();
-    var hour = zeroPad(a.getHours(),2);
-    var min = zeroPad(a.getMinutes(),2);
-    var sec = zeroPad(a.getSeconds(),2);
-    return [date + ' ' + month + ' ' + year,
-	    hour + ':' + min + ':' + sec]
-}
+const id = require('./identicon.js');
 
-const getControllers = async (stash_address) => {
-    let results = await search.searchAddress(
-	0,stash_address,
-	{
-	    call_function: ["bond","set_controller"],
-	    // can have multiple controllers (over time)
-	    param: ["controller"]
-	});
-    let ret=[]
-    if (results.length>0) {
-	for (let r of results) {
-	    if (r.value.Id) {
-		ret.push(addr.ss58Encode(utils.fromHexString(r.value.Id)))
-	    } else {
-		ret.push(addr.ss58Encode(utils.fromHexString(r.value)))
-	    }
-	}
+const addr = require('./address.js');
+
+const utils = require('./utils.js');
+
+const search = require('./search.js');
+
+const sort = require('./sort.js');
+
+const prices = require('./prices.js');
+
+const csv = require('./table-export.js');
+
+const eras = require('./eras.js');
+
+var balance = 0;
+var balance_currency = 0;
+var token = "KSM";
+var num_eras = 28;
+var list_of_eras = [];
+
+const zeroPad = (num, places) => String(num).padStart(places, '0');
+
+const timeStampToString = unix_timestamp => {
+  let a = new Date(unix_timestamp * 1000);
+  let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  let year = a.getFullYear();
+  let month = months[a.getMonth()];
+  let date = a.getDate();
+  let hour = zeroPad(a.getHours(), 2);
+  let min = zeroPad(a.getMinutes(), 2);
+  let sec = zeroPad(a.getSeconds(), 2);
+  return [date + ' ' + month + ' ' + year, hour + ':' + min + ':' + sec];
+};
+
+const getControllers = async stash_address => {
+  let results = await search.searchAddress(0, stash_address, {
+    call_function: ["bond", "set_controller"],
+    // can have multiple controllers (over time)
+    param: ["controller"]
+  });
+  let ret = [];
+
+  if (results.length > 0) {
+    for (let r of results) {
+      if (r.value.Id) {
+        ret.push(addr.ss58Encode(utils.fromHexString(r.value.Id)));
+      } else {
+        ret.push(addr.ss58Encode(utils.fromHexString(r.value)));
+      }
     }
-    return ret
-}
+  }
 
-const getNominations = async (controller_address) => {
-    let results = await search.searchAddress(
-	0,controller_address,
-	{
-	    call_function: ["nominate"],
-	    param: ["targets"]
-	});
+  return ret;
+};
 
-    let ret = []
-    if (results.length>0) {
-	for (let r of results) {
-	// the first one should be the most recent
-	    let value = r.value
-	    for (let v of value) {
-		let a
-		if (v.Id) {
-		    a = addr.ss58Encode(utils.fromHexString(v.Id))
-		} else {
-		    a = addr.ss58Encode(utils.fromHexString(v))
-		}
-		// the same validator can be in multiple nomination calls
-		// (I guess each nomination resets the previous ones but
-		// we need to collect em all, just in case we get some
-		// payouts from them in our sample)
-		if (!ret.includes(a)) {
-		    ret.push(a)
-		}
-	    }
-	}
+const getNominations = async controller_address => {
+  let results = await search.searchAddress(0, controller_address, {
+    call_function: ["nominate"],
+    param: ["targets"]
+  });
+  let ret = [];
+
+  if (results.length > 0) {
+    for (let r of results) {
+      // the first one should be the most recent
+      let value = r.value;
+
+      for (let v of value) {
+        let a;
+
+        if (v.Id) {
+          a = addr.ss58Encode(utils.fromHexString(v.Id));
+        } else {
+          a = addr.ss58Encode(utils.fromHexString(v));
+        } // the same validator can be in multiple nomination calls
+        // (I guess each nomination resets the previous ones but
+        // we need to collect em all, just in case we get some
+        // payouts from them in our sample)
+
+
+        if (!ret.includes(a)) {
+          ret.push(a);
+        }
+      } // we can stop collecting nominations once we find
+      // one before the start era we are collecting rewards for
+
+
+      let nomination_time = new Date(r.time * 1000);
+      console.log(nomination_time);
+
+      if (nomination_time < eras.start_date) {
+        return ret;
+      }
     }
-    return ret
-}
+  }
+
+  return ret;
+};
 
 const copyToClipboard = str => {
   const el = document.createElement('textarea');
@@ -12128,275 +12234,418 @@ const copyToClipboard = str => {
   el.select();
   document.execCommand('copy');
   document.body.removeChild(el);
+}; // store these so we can avoid looking them up all the time
+
+
+const validatorIdentities = {};
+
+const getValidatorIdentity = address => {
+  let name = validatorIdentities[address];
+
+  if (name == undefined) {
+    return "<span class='long_name'>" + address + "</span>";
+  } else {
+    return name;
+  }
 };
 
-const displayAccount = async (icondiv,namediv,address,showName) => {
-    icondiv.append(id.identicon(addr.ss58Decode(address), false, 30))	
-    icondiv.click(() => { copyToClipboard(address) })
+const displayAccount = async (icondiv, namediv, address, showName) => {
+  icondiv.append(id.identicon(addr.ss58Decode(address), false, 30));
+  icondiv.click(() => {
+    copyToClipboard(address);
+  });
+  let account;
+  let name;
 
-    let account
-    let name
-    if (showName) {
-	account = await api.getSearch(address)
-	name = account.data.account.account_display.display
+  if (showName) {
+    account = await api.getSearch(address);
+    name = account.data.account.account_display.display;
+
+    if (name == "") {
+      name = account.data.account.account_display.account_index;
     }
-    if (!name || name=="") {
-	namediv.attr("class","long_name")
-	namediv.html(address);
+  }
+
+  if (!name || name == "") {
+    namediv.attr("class", "long_name");
+    namediv.html(address);
+  } else {
+    validatorIdentities[address] = name;
+    namediv.html(name);
+  }
+};
+
+const renderNominations = async (div, n, showAccountName) => {
+  let nominations = {};
+
+  for (let validator of n) {
+    if (!nominations[validator]) {
+      nominations[validator] = {
+        total: 0,
+        count: 0,
+        percent: 0,
+        splits: 0
+      };
+      $("#nominations").append($('<tr>').append($('<td>').attr('id', validator + '_icon').attr('class', 'icon')).append($('<td>').attr('id', validator + '_id')).append($('<td>').attr('id', validator + '_percent').html("...")).append($('<td>').attr('id', validator + '_count').html("0")).append($('<td>').attr('id', validator + '_splits').html("high")));
+      await displayAccount($('#' + validator + '_icon'), $('#' + validator + '_id'), validator, showAccountName);
+    }
+  }
+
+  return nominations;
+};
+
+const findValidatorInParams = params => {
+  let validator_stash;
+  let era;
+
+  for (const p of params) {
+    if (p.name == "validator_stash") {
+      validator_stash = utils.fromHexString(p.value);
+    }
+
+    if (p.name == "era") {
+      era = p.value;
+    }
+  }
+
+  if (validator_stash) {
+    return [addr.ss58Encode(validator_stash), era];
+  }
+
+  return null;
+};
+
+const updateAPY = (total_payout, num_eras) => {
+  if (balance && balance > 0) {
+    // balance is (bonded) amount we have *now*
+    // get the percentage of this that we know comes from payouts
+    let payout_percent = total_payout / balance * 100; // get this as average per era
+
+    payout_percent /= num_eras; // multiply up to number of eras in a year
+
+    let eras_per_day = 4;
+    if (token == "DOT") eras_per_day = 1;
+    let apy = payout_percent * eras_per_day * 365;
+    $("#apy").html(apy.toFixed(2) + "%");
+  }
+};
+
+const updateNominations = (stats, nominations) => {
+  let total = 0;
+
+  for (let validator in nominations) {
+    total += nominations[validator].total;
+  }
+
+  let el = document.getElementById('total');
+
+  if (network == "dot") {
+    el.innerHTML = stats.weekly_total / 1e10 + " " + token;
+  } else {
+    // right for westend too??
+    el.innerHTML = stats.weekly_total / 1e12 + " " + token;
+  }
+
+  updateAPY(stats.weekly_total, stats.num_eras);
+
+  for (let validator in nominations) {
+    let n = nominations[validator];
+    n.percent = n.total / total * 100;
+    $('#' + validator + '_percent').html(n.percent.toFixed(2) + "%");
+    $('#' + validator + '_count').html(n.count);
+
+    if (n.splits == 0) {
+      $('#' + validator + '_splits').html("high");
     } else {
-	namediv.html(name);
+      if (n.splits == n.count) {
+        $('#' + validator + '_splits').html("low");
+      } else {
+        $('#' + validator + '_splits').html("medium");
+      }
     }
-}
+  }
 
-const renderNominations = async (div,n,showAccountName) => {
-    let nominations = {}
-    for (let validator of n) {
-	if (!nominations[validator]) {
-	    nominations[validator]={
-		total: 0,
-		count: 0,
-		percent: 0,
-		splits: 0,
-	    }
+  sort.sortTable("nominations", 2);
+};
 
-	    $("#nominations")
-		.append($('<tr>')
-			.append($('<td>')
-				.attr('id',validator+'_icon')
-				.attr('class','icon'))
-			.append($('<td>').attr('id',validator+'_id'))
-			.append($('<td>').attr('id',validator+'_percent')
-				.html("..."))
-			.append($('<td>').attr('id',validator+'_count')
-				.html("0"))
-			.append($('<td>').attr('id',validator+'_splits')
-				.html("high"))
-		       );
-	    
-	    await displayAccount(
-		$('#'+validator+'_icon'),
-		$('#'+validator+'_id'),
-		validator,showAccountName)
-	}
+const addToDetails = async (timestamp, amount, probable_validators, network) => {
+  let t = timeStampToString(timestamp); // convert from plancks, which is what we use everywhere else
+
+  let p = amount / 1e12;
+
+  if (network == "dot") {
+    p = amount / 1e10;
+  }
+
+  let price = await prices.priceAt(timestamp, $("#currency").val());
+  let currency = $("#currency").val().toUpperCase();
+  balance_currency += price * p;
+  $("#total-currency").html(prices.rounding(balance_currency).toFixed(2) + " " + currency);
+  $("#details").append($('<tr>').append($('<td>').html(t[0])).append($('<td>').html(t[1])).append($('<td>').html(p + " " + token)).append($('<td>').html(prices.rounding(p * price).toFixed(2) + " " + currency)).append($('<td>').html(prices.rounding(price).toFixed(2) + " " + currency)).append($('<td>').html(probable_validators.reduce((str, v) => {
+    return str + getValidatorIdentity(v.addr) + "<br>eras: " + v.eras.join(", ") + " <br>";
+  }, ""))));
+};
+
+const displayStaking = async (div, stash_address, nominations, num_eras) => {
+  let x = await api.getStaking(stash_address, num_eras);
+  const stats = {
+    weekly_total: 0,
+    num_eras: 0
+  };
+
+  if (x.length < 1) {
+    displayError("No rewards found.");
+  }
+
+  for (const r of x) {
+    // get the transaction detail of this reward
+    let y = await api.getExtrinsic(r.extrinsic_hash);
+    stats.weekly_total += parseInt(r.amount);
+    stats.num_eras += 1;
+    let probable_validators = []; // check the reward time - it's possible if we just ask for the
+    // most recent extrinsics, some or all may have happened before
+    // the specified start time
+
+    let reward_time = new Date(y.data.block_timestamp * 1000);
+
+    if (reward_time >= eras.start_date) {
+      // payout extrinsics contain nominator addresses in their params
+      // (validator_stash), we need to deal with batched payouts too
+      if (y.data.call_module_function == "batch" || y.data.call_module_function == "batch_all") {
+        // we need to filter the validators to find the ones we
+        // have actually nominated previously
+        let unique = {}; // a list of mutltiple calls
+
+        for (let calls of y.data.params) {
+          for (let call of calls.value) {
+            let args = call.call_args;
+            if (!args) args = call.params;
+            let [addr, era] = findValidatorInParams(args); // validators can appear more than once
+
+            if (!unique[addr]) {
+              unique[addr] = [era];
+            } else {
+              // add different era to same validator
+              unique[addr].push(era);
+            }
+          }
+        } // count the number of nominations we have
+
+
+        let count = 0;
+
+        for (let addr in unique) {
+          if (nominations[addr]) {
+            count += 1;
+          }
+        }
+
+        for (let addr in unique) {
+          if (nominations[addr]) {
+            let n = nominations[addr]; // biggest mystery is whether we can get which validator is our one
+            // if we have nomiated multiple in this set, then split the amount
+            // between them equally (for the moment)
+
+            n.total += parseInt(r.amount) / count;
+
+            if (count > 1) {
+              n.splits += 1;
+            }
+
+            n.count += 1;
+            updateNominations(stats, nominations);
+            probable_validators.push({
+              addr: addr,
+              eras: unique[addr]
+            });
+          }
+        }
+      } else {
+        // or a single validator stash - easy!
+        let [addr, era] = findValidatorInParams(y.data.params);
+        let n = nominations[addr];
+
+        if (n) {
+          n.total += parseInt(r.amount);
+          n.count += 1;
+          updateNominations(stats, nominations);
+          probable_validators.push({
+            addr: addr,
+            eras: [era]
+          });
+        }
+      }
+
+      await addToDetails(y.data.block_timestamp, r.amount, probable_validators);
     }
-    return nominations;
-}
+  }
+};
 
-const findValidatorInParams = (params) => {
-    let validator_stash
-    let era
-    for (const p of params) {		
-	if (p.name=="validator_stash") {
-	    validator_stash=utils.fromHexString(p.value)
-	}
-	if (p.name=="era") {
-	    era=p.value
-	}
-    }
-    if (validator_stash) {
-	return [addr.ss58Encode(validator_stash),era]
-    }
-    return null;
-}
+const displayError = err => {
+  $("#working").css("display", "none");
+  $("#start").css("display", "block");
+  $("#error").css("display", "block").html(err);
+};
 
-const updateAPY = (total_payout,num_eras) => {
-    if (balance && balance>0) {
-	// balance is (bonded) amount we have *now*
-	// get the percentage of this that we know comes from payouts
-	let payout_percent=(total_payout/balance)*100
-	// get this as average per era
-	payout_percent/=num_eras
-	// multiply up to number of eras in a year
-	let eras_per_day = 4
-	let apy = payout_percent*eras_per_day*365    
-	$("#apy").html(apy.toFixed(2)+"%")
-    }
-}
+const displayDone = err => {
+  $("#working").css("display", "none");
+  $("#start").css("display", "block");
+  $("#error") //.css("background","green")
+  .css("display", "block").html(err);
+};
 
+const start = async () => {
+  $("#error").css("display", "none");
+  $("#working").css("display", "block");
+  $("#start").css("display", "none");
+  let network = $("#network").val();
+  addr.setNetwork(network);
+  api.setNetwork(network);
+  token = network.toUpperCase();
+  prices.setToken(network);
+  let stash_address = $("#stash_address").val();
+  $("#nominations tbody").empty();
+  $("#details tbody").empty(); //$("#start").prop('disabled', true);
 
-const updateNominations = (stats,nominations) => {
-    let total = 0
-    for (let validator in nominations) {
-	total+=nominations[validator].total
-    }
+  let a = addr.ss58Decode(stash_address);
 
-    var el = document.getElementById('total');
-    el.innerHTML=stats.weekly_total/1e12+" KSM"
+  if (!a) {
+    displayError("Address error (check the network is correct?)");
+    return;
+  } else {
+    $("#stash_icon").empty();
+    $("#stash_icon").append(id.identicon(a, false, 50));
+    let account = await api.getSearch(stash_address);
+    balance = parseFloat(account.data.account.bonded);
+    let controller_addresses = await getControllers(stash_address);
 
-    updateAPY(stats.weekly_total,stats.num_eras)
-
-    for (let validator in nominations) {
-	let n = nominations[validator]
-	n.percent = (n.total/total)*100
-	
-	$('#'+validator+'_percent').html(n.percent.toFixed(2)+"%")
-	$('#'+validator+'_count').html(n.count)
-	if (n.splits==0) {
-	    $('#'+validator+'_splits').html("high")
-	} else {
-	    if (n.splits==n.count) {
-		$('#'+validator+'_splits').html("low")
-	    } else {
-		$('#'+validator+'_splits').html("medium")
-	    }
-	}	
+    if (controller_addresses.length == 0) {
+      displayError("Can't find controller account for this address");
+      return;
     }
 
-    sort.sortTable("nominations",2)
-}
-
-const addToDetails = async (timestamp,amount,probable_validators) => {
-    let t = timeStampToString(timestamp)
-    let p = amount/1e12
-
-    $("#details")
-	.append($('<tr>')
-		.append($('<td>').html(t[0]))
-		.append($('<td>').html(t[1]))
-		.append($('<td>').html(p+" KSM"))
-		.append($('<td>').html("..."))
-		//.append($('<td>').html(p*await api.getPrice(timestamp)))
-		.append($('<td>').html(probable_validators.reduce((str,v) => {
-		    return str+"<span class='addr'>"+v.addr+"</span><br>eras: "+v.eras.join(", ")+"<br>"
-		},""))))
-}
-
-const displayStaking = async (div,stash_address,nominations) => {
-    var x = await api.getStaking(stash_address);
-    const stats = { weekly_total: 0, num_eras: 0 };
-    for (const r of x) {
-	// get the transaction detail of this reward
-	let y = await api.getExtrinsic(r.extrinsic_hash);
-	
-	stats.weekly_total += parseInt(r.amount)
-	stats.num_eras += 1
-	probable_validators = []
-	
-	// payout extrinsics contain nominator addresses in their params
-	// (validator_stash), we need to deal with batched payouts too
-	if (y.data.call_module_function=="batch") {
-	    // we need to filter the validators to find the ones we
-	    // have actually nominated previously
-	    let unique = {}
-	    // a list of mutltiple calls
-	    for (let calls of y.data.params) {
-		for (let call of calls.value) {
-		    let args = call.call_args
-		    if (!args) args = call.params
-		    let [addr,era]=findValidatorInParams(args)
-		    // validators can appear more than once
-		    if (!unique[addr]) {
-			unique[addr]=[era]
-		    } else {
-			// add different era to same validator
-			unique[addr].push(era)
-		    }
-		}
-	    }
-
-	    // count the number of nominations we have
-	    let count=0
-	    for (let addr in unique) {
-		if (nominations[addr]) {
-		    count+=1;
-		}
-	    }
-	    
-	    for (let addr in unique) {
-		if (nominations[addr]) {
-		    let n = nominations[addr]
-		    // biggest mystery is whether we can get which validator is our one
-		    // if we have nomiated multiple in this set, then split the amount
-		    // between them equally (for the moment)
-		    n.total+=parseInt(r.amount)/count
-		    if (count>1) {
-			n.splits+=1
-		    }
-		    n.count+=1
-		    updateNominations(stats,nominations)
-		    probable_validators.push({addr:addr, eras: unique[addr]})
-		}
-	    }
-	} else {
-	    // or a single validator stash - easy!
-	    let [addr,era]=findValidatorInParams(y.data.params)
-	    let n = nominations[addr]
-	    if (n) {
-		n.total+=parseInt(r.amount)					
-		n.count+=1
-		updateNominations(stats,nominations)
-		probable_validators.push({addr:addr, eras: [era]})
-	    }
-	}
-
-	await addToDetails(y.data.block_timestamp,r.amount,probable_validators)
-
-    }
-}
-
-const stashAddr = async () => {
-    let stash_address = $("#stash_address").val()
     $("#nominations tbody").empty();
-    $("#details tbody").empty();
-    $("#start").prop('disabled', true);
-    $("#status").html("status: searching for controller")
+    let el = document.getElementById('nominations');
+    let n = [];
 
-    let a = addr.ss58Decode(stash_address)
-
-    if (!a) {
-	$("#status").html("status: address error")
-    } else {
-	$("#stash_icon").empty();
-	$("#stash_icon").append(id.identicon(a, false, 50))
-
-	let account = await api.getSearch(stash_address)
-	balance = parseFloat(account.data.account.bonded)    
-	
-	let controller_addresses = await getControllers(stash_address)
-
-	if (controller_addresses.length==0) {
-	    $("#status").html("status: couldn't find controller")
-	    return
-	}
-
-	$("#nominations tbody").empty();
-	$("#status").html("status: loading nominations")
-	var el = document.getElementById('nominations');
-	let n = []
-	for (let c of controller_addresses) {
-	    n=n.concat(await getNominations(c))
-	}
-	
-	if (n.length==0) {
-	    $("#status").html("status: no nominations found")
-	    return
-	}
-	
-	nominations = await renderNominations(el, n, true);	
-	$("#status").html("status: loading rewards")
-	var el = document.getElementById('reward-slash');
-	await displayStaking(el,stash_address,nominations)
-	$("#status").html("status: finished")
+    for (let c of controller_addresses) {
+      n = n.concat(await getNominations(c));
     }
+
+    if (n.length == 0) {
+      displayError("No nominations found");
+      return;
+    }
+
+    let nominations = await renderNominations(el, n, true);
+    el = document.getElementById('reward-slash');
+    await displayStaking(el, stash_address, nominations, num_eras);
+    displayDone("Finished: <a href='#' id='csv'>Download results as CSV</a>");
+    $('#csv').click(csvExport);
+  }
+};
+
+function csvExport() {
+  csv.download_table_as_csv('details');
 }
 
-function openTable(tableName) {
-  var i;
-  var x = document.getElementsByClassName("tab");
-  for (i = 0; i < x.length; i++) {
+function openTab(name) {
+  let x = document.getElementsByClassName("tab");
+
+  for (let i = 0; i < x.length; i++) {
     x[i].style.display = "none";
   }
-  document.getElementById(tableName).style.display = "table";
-}
+
+  document.getElementById(name).style.display = "block";
+} // connect up the things
 
 
+eras.initDate(eras => {
+  num_eras = eras;
+}, $("#network").val());
+$("#network").change(() => {
+  eras.update(eras => {
+    num_eras = eras;
+  }, $("#network").val());
+});
+$('#start').click(start);
+$("#nominations-button").click(() => {
+  openTab('nominations-tab'); //$("#nominations-button").css("background", "#eee");
+  //$("#details-button").css("background", "white");
+});
+$("#details-button").click(() => {
+  openTab('rewards-tab'); //$("#nominations-button").css("background", "white");
+  //$("#details-button").css("background", "#eee");
+});
+$("#missing-button").click(() => {
+  openTab('missing-tab'); //$("#nominations-button").css("background", "white");
+  //$("#details-button").css("background", "#eee");
+});
 
-// connect up the things
-$("#stash_address").change(stashAddr);
-$("#nominations-button").click(()=>{openTable('nominations')})
-$("#details-button").click(()=>{openTable('details')})
+},{"./address.js":9,"./api.js":10,"./eras.js":11,"./identicon.js":12,"./prices.js":14,"./search.js":15,"./sort.js":16,"./table-export.js":17,"./utils.js":18,"jquery":7}],14:[function(require,module,exports){
+"use strict";
 
-},{"./address.js":9,"./api.js":10,"./identicon.js":11,"./search.js":13,"./sort.js":14,"./utils.js":15,"jquery":7}],13:[function(require,module,exports){
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.rounding = exports.priceAt = exports.setToken = void 0;
+const base_url = "https://api.coingecko.com/api/v3/";
+var historical = "coins/kusama/history";
+
+const setToken = token => {
+  let s = "kusama";
+  if (token == "dot") s = "polkadot";
+  if (token == "wnd") s = "westend";
+  historical = "coins/" + s + "/history";
+};
+
+exports.setToken = setToken;
+
+const priceURL = date => {
+  return base_url + historical + "?date=" + date;
+};
+
+const timestampToDate = time => {
+  let date = new Date(time * 1000);
+  return date.getDate().toString().padStart(2, "0") + "-" + (date.getMonth() + 1).toString().padStart(2, "0") + "-" + date.getFullYear();
+};
+
+const rounding = num => {
+  // todo: possibly incorrect
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+};
+
+exports.rounding = rounding;
+
+const priceAt = async (timestamp, currency) => {
+  if (historical == "coins/westend/history") return 0;
+  let date = timestampToDate(timestamp);
+  let data;
+  let result = false;
+
+  try {
+    const fetchResponse = await fetch(priceURL(date));
+    data = await fetchResponse.json();
+    result = true;
+  } catch (e) {
+    console.log("error talking to coingecko");
+    console.log(e);
+  }
+
+  if (result) {
+    let r = data["market_data"]["current_price"][currency];
+
+    if (r == undefined) {
+      console.log("problem parsing coingecko: " + data);
+    }
+
+    return r;
+  }
+};
+
+exports.priceAt = priceAt;
+
+},{}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12493,7 +12742,7 @@ const searchAddress = async (depth, address, search_params) => {
 
 exports.searchAddress = searchAddress;
 
-},{"./address.js":9,"./api.js":10,"./utils.js":15,"jquery":7}],14:[function(require,module,exports){
+},{"./address.js":9,"./api.js":10,"./utils.js":18,"jquery":7}],16:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12544,7 +12793,51 @@ function sortTable(id, col) {
   }
 }
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.download_table_as_csv = download_table_as_csv;
+
+// Quick and simple export target #table_id into a csv
+function download_table_as_csv(table_id, separator = ',') {
+  // Select rows from table_id
+  var rows = document.querySelectorAll('table#' + table_id + ' tr'); // Construct csv
+
+  var csv = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = [],
+        cols = rows[i].querySelectorAll('td, th');
+
+    for (var j = 0; j < cols.length; j++) {
+      // Clean innertext to remove multiple spaces and jumpline (break csv)
+      var data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' '); // Escape double-quote with double-double-quote (see https://stackoverflow.com/questions/17808511/properly-escape-a-double-quote-in-csv)
+
+      data = data.replace(/"/g, '""'); // Push escaped string
+
+      row.push('"' + data + '"');
+    }
+
+    csv.push(row.join(separator));
+  }
+
+  var csv_string = csv.join('\n'); // Download it
+
+  var filename = 'export_' + table_id + '_' + new Date().toLocaleDateString() + '.csv';
+  var link = document.createElement('a');
+  link.style.display = 'none';
+  link.setAttribute('target', '_blank');
+  link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+},{}],18:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12570,7 +12863,7 @@ const sleep = ms => {
 
 exports.sleep = sleep;
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -12722,7 +13015,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -14503,7 +14796,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":16,"buffer":17,"ieee754":18}],18:[function(require,module,exports){
+},{"base64-js":19,"buffer":20,"ieee754":21}],21:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -14590,4 +14883,4 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}]},{},[12]);
+},{}]},{},[13]);

@@ -11,10 +11,9 @@ There is a lot of information on how to choose validators but not so
 much on judging how they have actually done in relation to your
 specific nomination choices - this is just an experiment trying to do
 something like that. Each nomination is loaded and a percentage of
-your payout over the last ~7 days (28 eras) is shown next to
-them. This might make it easier to tune and select a good mix of
-nominations, but isn't really a judgement on the validators
-performance.
+your payout is shown next to them. This might make it easier to tune
+and select a good mix of nominations, but isn't really a judgement on
+the validators performance.
 
 The algorithm is not perfect as it can be difficult to follow the
 trail in retrospect - sometimes payouts are batched and more than one
@@ -28,10 +27,7 @@ matter.
 ## Try it
 
 * [Github hosted](https://playing-with-dust.github.io/nominumbers/)
-* [IPFS](https://gateway.ipfs.io/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
-* [Cloudflare IPFS](https://cloudflare-ipfs.com/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
-
-IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
+* (IPFS for v1.0 soon)
 
 ## Run nominumbers locally
 
@@ -39,23 +35,29 @@ IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
 2. Extract to your device.
 3. Point your browser at `nominumbers-production/index.html`.
 
-## Notes:
-
-* APY is an estimate - e.g. if your bonded value has changed in the
-  last 28 eras it will be incorrect.
-* Currently nominumbers loads all nominations found - this is partly a
-  debug	measure to make sure we capture all rewards. The fix will be to
-  reduce this to the last nomination call and any others in the past
-  week (see [#7](https://github.com/playing-with-dust/nominumbers/issues/7)). 
-
 ## Release info
 
-### V0.4
+### v1.0rc1
+
+* Added support for polkadot and westend
+* Currency conversion for USD/EUR/GBP: totals, reward and daily prices added
+* Download report as CSV file for tax calculations
+* User definable/arbitrary start time
+* Automatically collects validators nominated during the specified time period
+* Added batch_all payout support
+
+(IPFS hash coming soon)
+
+### v0.4
 
 * Added reward info including possible eras (towards income tax calculations)
 * Added "click on icon = address to copy buffer" feature
 * Fixed extrinsic parsing when params is an empty string
 * Fixed percentage in batch calls (was % of all validators in payout, not nominations)
+
+* [IPFS](https://gateway.ipfs.io/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
+* [Cloudflare IPFS](https://cloudflare-ipfs.com/ipns/k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw)
+* IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
 
 ## Building
 
@@ -64,6 +66,5 @@ IPFS hash: k51qzi5uqu5dib1fq1xzstlnsbrv032lqe40iesofk0ioquvojjutvkqddgdqw
 
 * Complaints -> playing_with_dust@protonmail.com
 * Problems -> [Issues](https://github.com/playing-with-dust/nominumbers/issues)
-* Support -> FLzgz4qt5foC1DXRHQQwC2cLwu39eGkhx93x7UsM5uniBvM
 
 This project is kindly supported by the [Kusama Treasury](https://kusama.subscan.io/treasury_tip/0xf22af71734034b6fea46fcde7df56ead363beed687eb55e26a84691171d755aa)
