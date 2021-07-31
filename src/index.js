@@ -187,7 +187,7 @@ const findValidatorInParams = (params) => {
     if (validator_stash) {
 	return [addr.ss58Encode(validator_stash),era]
     }
-    return null;
+    return [undefined,undefined];
 }
 
 const updateAPY = (total_payout,num_eras) => {
@@ -283,6 +283,7 @@ const displayStaking = async (div,stash_address,nominations,num_eras) => {
 	
 	stats.weekly_total += parseInt(r.amount)
 	stats.num_eras += 1
+
 	let probable_validators = []
 
 	// check the reward time - it's possible if we just ask for the
