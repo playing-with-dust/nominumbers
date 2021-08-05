@@ -12339,7 +12339,7 @@ const updateNominations = (stats, nominations) => {
 
   let el = document.getElementById('total');
 
-  if (network == "dot") {
+  if (token == "DOT") {
     el.innerHTML = stats.weekly_total / 1e10 + " " + token;
   } else {
     // right for westend too??
@@ -12368,12 +12368,12 @@ const updateNominations = (stats, nominations) => {
   sort.sortTable("nominations", 2);
 };
 
-const addToDetails = async (timestamp, amount, probable_validators, network) => {
+const addToDetails = async (timestamp, amount, probable_validators) => {
   let t = timeStampToString(timestamp); // convert from plancks, which is what we use everywhere else
 
   let p = amount / 1e12;
 
-  if (network == "dot") {
+  if (token == "DOT") {
     p = amount / 1e10;
   }
 
