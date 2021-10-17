@@ -124,6 +124,7 @@ const displayAccount = async (icondiv,namediv,address,showName) => {
     let name
     if (showName) {
 	account = await api.getSearch(address)
+	console.log(account)
 	name = account.data.account.account_display.display
 	if (name=="") {
 	    name = account.data.account.account_display.account_index
@@ -420,7 +421,7 @@ const start = async () => {
 	    return
 	}
 	
-	let nominations = await renderNominations(el, n, false);	
+	let nominations = await renderNominations(el, n, true);	
 	
 	el = document.getElementById('reward-slash');
 	await displayStaking(el,stash_address,nominations,num_eras)
