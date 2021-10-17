@@ -1,5 +1,11 @@
-const fromHexString = hexString =>
-	  new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+const fromHexString = hexString => {
+    // at some point 0x started being prepended by substrate in some places...
+    if (hexString.startsWith("0x")) {
+	hexString = hexString.substring(2)
+    }
+
+    return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+}
 
 const toHexString = byteArray => {
   return Array.from(byteArray, function(byte) {

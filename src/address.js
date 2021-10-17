@@ -24,6 +24,7 @@ const ss58Encode = (address) => {
     return bs58.encode(complete)
 }
 
+
 const ss58Decode = (address) => {
     let a
     try {

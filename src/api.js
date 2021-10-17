@@ -35,7 +35,13 @@ const callApi = async (url,body,fn) => {
 	try {
             const fetchResponse = await fetch(`https://`+network_api+`.api.subscan.io/api/`+url, settings);
             data = await fetchResponse.json();
-	    result = true
+	    if (data.message && data.message=="API rate limit exceeded") {
+		console.log("rate limit");
+		// wait a bit and try again
+		await sleep(500);
+	    } else {
+		result = true
+	    }
 	} catch (e) {
 	    console.log("error talking to subscan");
 	    console.log(e);

@@ -84,7 +84,6 @@ const getNominations = async (controller_address) => {
 	    // we can stop collecting nominations once we find
 	    // one before the start era we are collecting rewards for
 	    let nomination_time = new Date(r.time * 1000);
-	    console.log(nomination_time)
 	    if (nomination_time<eras.start_date) {		
 		return ret;
 	    }
@@ -280,7 +279,7 @@ const displayStaking = async (div,stash_address,nominations,num_eras) => {
     for (const r of x) {
 	// get the transaction detail of this reward
 	let y = await api.getExtrinsic(r.extrinsic_hash);
-	
+
 	stats.weekly_total += parseInt(r.amount)
 	stats.num_eras += 1
 
@@ -290,7 +289,7 @@ const displayStaking = async (div,stash_address,nominations,num_eras) => {
 	// most recent extrinsics, some or all may have happened before
 	// the specified start time
 	let reward_time = new Date(y.data.block_timestamp * 1000);
-	if (reward_time>=eras.start_date) {			
+	if (reward_time>=eras.start_date) {
 	    // payout extrinsics contain nominator addresses in their params
 	    // (validator_stash), we need to deal with batched payouts too
 	    if (y.data.call_module_function=="batch" ||
@@ -298,7 +297,7 @@ const displayStaking = async (div,stash_address,nominations,num_eras) => {
 		// we need to filter the validators to find the ones we
 		// have actually nominated previously
 		let unique = {}
-		// a list of mutltiple calls
+		// a list of mutltiple calls		
 		for (let calls of y.data.params) {
 		    for (let call of calls.value) {
 			let args = call.call_args
@@ -421,7 +420,7 @@ const start = async () => {
 	    return
 	}
 	
-	let nominations = await renderNominations(el, n, true);	
+	let nominations = await renderNominations(el, n, false);	
 	
 	el = document.getElementById('reward-slash');
 	await displayStaking(el,stash_address,nominations,num_eras)
