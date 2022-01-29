@@ -21,22 +21,6 @@ const displayAccount = async (div,raw_address,showName) => {
 	div.innerHTML+=name+"<br>";
     }	
 }
-
-
-const getController = async (stash_address) => {
-    let results = search.searchAddress(
-	0,stash_address,
-	{
-	    call_function: ["bond"],
-	    param: ["controller"]
-	});
-    console.log(results)
-    if (results.length>0) {
-	return 
-	
-    }
-    return null
-}
     
 const findValidatorInParams = (params) => {
     let validator_stash
@@ -52,10 +36,10 @@ const findValidatorInParams = (params) => {
 }
 
 const findNominations = async (div,address,showAccountName) => {
-    console.log(["nomination search for controller: ",address])
+    //console.log(["nomination search for controller: ",address])
     let targets = await api.getNomination(address)
     if (!targets) {
-	console.log("searching in batch for nominations")
+	//console.log("searching in batch for nominations")
 	targets = await api.getNominationFromBatch(address)
 	if (!targets) {	
 	    jQuery("#status").html("status: problem loading nominations")
@@ -64,9 +48,9 @@ const findNominations = async (div,address,showAccountName) => {
     }
     
     let nominations = {}
-    console.log(targets)
+    //console.log(targets)
     for (let t of targets) {
-	console.log(t)
+	//console.log(t)
 	let validator = ss58Encode(fromHexString(t))
 	nominations[validator]={
 	    total: 0,
@@ -144,14 +128,14 @@ const displayStaking = async (div,stash_address,nominations) => {
     await sleep(1000);
     const stats = { weekly_total: 0 };
     for (const r of x) {
-	console.log(r.extrinsic_hash)
+	//console.log(r.extrinsic_hash)
 	//let y = await api.getSearch(r.extrinsic_hash);
 	// get the transaction detail of this reward
 	let y = await api.getExtrinsic(r.extrinsic_hash);
 	await sleep(1000);
 
 	stats.weekly_total += parseInt(r.amount)
-	console.log(y);
+	//console.log(y);
 	
 	// events contain nominator addresses
 	// params contain validator_stash addresses, but sometimes these are batched
@@ -171,7 +155,7 @@ const displayStaking = async (div,stash_address,nominations) => {
 		}
 	    }
 
-	    console.log("found: "+unique.length+" validators")
+	    //console.log("found: "+unique.length+" validators")
 	    
 	    // count number of nominations we have
 	    let count=0

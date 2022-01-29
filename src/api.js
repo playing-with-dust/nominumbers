@@ -152,6 +152,18 @@ const getPrice = async (timestamp) => {
 	});
 }
 
+const getNominator = async (addr) => {
+    return callApi(
+	"scan/staking/nominator", {
+	    address: addr
+	},
+	(data) => {
+	    console.log(data);
+	    return data;
+	});
+}
+
+
 export {
     setNetwork,
     getStaking,
@@ -161,5 +173,6 @@ export {
     getSearch, 
     getExtrinsic,
     getExtrinsics,
-    getPrice
+    getPrice,
+    getNominator
 }

@@ -9,6 +9,14 @@ const prices = require('./prices.js')
 const csv = require('./table-export.js')
 const eras = require('./eras.js')
 
+// import {
+//   web3Accounts,
+//   web3Enable,
+//   web3FromAddress,
+//   web3ListRpcProviders,
+//   web3UseRpcProvider
+// } from '@polkadot/extension-dapp';
+
 var balance = 0
 var balance_currency = 0
 var token="KSM"
@@ -30,6 +38,7 @@ const timeStampToString = (unix_timestamp) => {
 	    hour + ':' + min + ':' + sec]
 }
 
+// old/slow version
 const getControllers = async (stash_address) => {
     let results = await search.searchAddress(
 	0,stash_address,
@@ -50,6 +59,27 @@ const getControllers = async (stash_address) => {
     }
     return ret
 }
+
+const getControllerAndReward = async (stash_address) => {
+    let results = await api.getNominator(stash_address);
+    let ret=[]
+    let staking_info = results.data.staking_info;
+    if (staking_info!=null) {
+	ret.push(staking_info.controller)
+	//console.log(staking_info.reward_account)
+	if (staking_info.reward_account=="stash") {
+	    ret.push(stash_address)
+	} else {
+	    if (staking_info.reward_account=="controller") {
+		ret.push(staking_info.controller)
+	    } else {
+		ret.push(staking_info.reward_account)		
+	    }
+	}
+    }
+    return ret
+}
+
 
 const getNominations = async (controller_address) => {
     let results = await search.searchAddress(
@@ -124,7 +154,7 @@ const displayAccount = async (icondiv,namediv,address,showName) => {
     let name
     if (showName) {
 	account = await api.getSearch(address)
-	console.log(account)
+	//console.log(account)
 	name = account.data.account.account_display.display
 	if (name=="") {
 	    name = account.data.account.account_display.account_index
@@ -268,8 +298,8 @@ const addToDetails = async (timestamp,amount,probable_validators) => {
 		},""))))
 }
 
-const displayStaking = async (div,stash_address,nominations,num_eras) => {
-    let x = await api.getStaking(stash_address,num_eras);
+const displayStaking = async (div,reward_address,nominations,num_eras) => {
+    let x = await api.getStaking(reward_address,num_eras);
 
     const stats = { weekly_total: 0, num_eras: 0 };
 
@@ -400,21 +430,21 @@ const start = async () => {
 
 	let account = await api.getSearch(stash_address)
 	balance = parseFloat(account.data.account.bonded)    
-	
-	let controller_addresses = await getControllers(stash_address)
 
-	if (controller_addresses.length==0) {
+	let addrs = await getControllerAndReward(stash_address);
+	
+	if (addrs.length==0) {
 	    displayError("Can't find controller account for this address")
 	    return
 	}
 
+	let controller_address = addrs[0]
+	let reward_address = addrs[1]
+
 	$("#nominations tbody").empty();
 
 	let el = document.getElementById('nominations');
-	let n = []
-	for (let c of controller_addresses) {
-	    n=n.concat(await getNominations(c))
-	}
+	let n = await getNominations(controller_address)
 	
 	if (n.length==0) {
 	    displayError("No nominations found")
@@ -424,7 +454,7 @@ const start = async () => {
 	let nominations = await renderNominations(el, n, true);	
 	
 	el = document.getElementById('reward-slash');
-	await displayStaking(el,stash_address,nominations,num_eras)
+	await displayStaking(el,reward_address,nominations,num_eras)
 	displayDone("Finished: <a href='#' id='csv'>Download results as CSV</a>")
 	$('#csv').click(csvExport);
     }
@@ -470,3 +500,14 @@ $("#missing-button").click(()=>{
     //$("#nominations-button").css("background", "white");
     //$("#details-button").css("background", "#eee");
 })
+
+// const test = async () => { 
+//     const allInjected = await web3Enable('my cool dapp');
+//     // returns an array of { address, meta: { name, source } }
+//     // meta.source contains the name of the extension that provides this account
+//     const allAccounts = await web3Accounts();
+//     console.log(allAccounts)
+//     console.log(allInjected)
+// }
+
+//test()
